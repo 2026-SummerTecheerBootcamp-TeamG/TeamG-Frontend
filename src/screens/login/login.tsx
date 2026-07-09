@@ -7,12 +7,12 @@ export const Login = (): JSX.Element => {
     const navigate = useNavigate();
     const handleLogin = () => {
         // 로그인 로직을 수행한 후, 성공하면 navigate를 사용하여 이동
-        navigate('/'); // 로그인 성공 시 이동할 경로
+        navigate('/planning-room'); // 로그인 성공 시 이동할 경로
     };
   return (
     // 배경을 흰색으로 변경 및 전체 레이아웃 중앙 정렬
     <main className="flex min-h-screen w-full items-center justify-center bg-white px-6 py-12">
-      <section className="flex w-full max-w-[553px] flex-col">
+      <section className="flex w-full max-w-138.25 flex-col">
         {/* 헤더 부분 */}
         <header className="mb-10 flex w-full flex-col">
           <h1 className="text-[48px] font-bold text-black font-['Pretendard']">
@@ -30,7 +30,7 @@ export const Login = (): JSX.Element => {
             <label className="text-[18px] font-bold text-zinc-400 font-['Pretendard']">이메일</label>
             <Input
                 type="email"
-                className="h-[96px] w-[553px] rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:outline-none !text-[24px] font-bold font-['Pretendard']"
+                className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:outline-none text-[24px]! font-bold font-['Pretendard']"
             />
             </div>
 
@@ -39,14 +39,14 @@ export const Login = (): JSX.Element => {
               <label className="text-[18px] font-bold text-zinc-400 font-['Pretendard']">비밀번호</label>
               <Input
                 type="password"
-                className="h-[96px] w-[553px] rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:outline-none !text-[24px] font-bold font-['Pretendard']"
+                className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:outline-none text-[24px]! font-bold font-['Pretendard']"
               />
             </div>
 
             {/* 로그인 버튼 */}
             <Button
               onClick={handleLogin}
-              className="h-[96px] w-[553px] rounded-[10px] border-[2.5px] border-black bg-rose-600 text-[30px] font-bold text-white hover:bg-rose-700 font-['Pretendard']"
+              className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-rose-600 text-[30px] font-bold text-white hover:bg-rose-700 font-['Pretendard']"
             >
               로그인
             </Button>
