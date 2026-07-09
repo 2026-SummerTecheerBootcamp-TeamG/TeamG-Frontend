@@ -2,13 +2,14 @@ import type { JSX } from "react/jsx-runtime";
 import { useEffect, useState } from "react";
 import { ArrowRight, Plane, Star, Plus, Check } from "lucide-react";
 import { FaWonSign } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 const DESIGN_WIDTH = 1920;
 const DESIGN_HEIGHT = 1080;
 
 const navItems = [
-  { label: "로그인", className: "left-[1608.5px] top-[15px]" },
-  { label: "회원가입", className: "left-[1737px] top-[15px]" },
+  { label: "로그인", href: "/login", className: "left-[1608.5px] top-[15px]" },
+  { label: "회원가입", href: "/signup", className: "left-[1737px] top-[15px]" },
 ];
 
 const flightTexts = [
@@ -81,13 +82,14 @@ export const Element = (): JSX.Element => {
 
               <nav aria-label="주요 메뉴">
                 {navItems.map((item) => (
-                  <button
+                  <Link
                     key={item.label}
+                    to = {item.href}
                     type="button"
                     className={`absolute cursor-pointer bg-transparent text-xl font-bold text-black transition-opacity hover:opacity-70 [font-family:'Pretendard',Helvetica] ${item.className}`}
                   >
                     {item.label}
-                  </button>
+                  </Link>
                 ))}
               </nav>
             </header>
@@ -101,11 +103,12 @@ export const Element = (): JSX.Element => {
               <div className="absolute left-[114px] top-[275px] h-28 w-[712px] rounded-[35px] border-[3px] border-black bg-white shadow-[2px_5px_2px_0px_rgba(0,0,0,1.00)]" />
               <p className="absolute left-[164.5px] top-[313px] text-3xl font-bold text-black [font-family:'Pretendard',Helvetica]">후쿠오카 3박 4일 여행, 100만원</p>
               <div className="absolute left-[614px] top-[305px] h-13 w-[0.1px] border-[1px] border-black bg-black" />
-              <button type="button" className="absolute left-[692.5px] top-[298px] flex h-16 w-[88px] items-center justify-center rounded-[10px] bg-rose-600">
+              <button type="button" onClick={() => window.location.href = '/login'} className="absolute left-[692.5px] top-[298px] flex h-16 w-[88px] items-center justify-center rounded-[10px] bg-rose-600">
                 <ArrowRight className="h-8 w-8 text-white" strokeWidth={2.5} />
               </button>
               <button
                 type="button"
+                onClick={() => window.location.href = '/login'}
                 className="absolute left-[114px] top-[605.5px] h-24 w-[374px] rounded-[40px] border-[3px] border-black bg-rose-600 text-3xl font-semibold text-white [font-family:'Inter',Helvetica] shadow-[0px_10px_2px_0px_rgba(0,0,0,1.00)] transition-all duration-150 ease-out hover:translate-y-[4px] hover:shadow-[0px_6px_2px_0px_rgba(0,0,0,1.00)] active:translate-y-[10px] active:shadow-[0px_0px_2px_0px_rgba(0,0,0,1.00)]"
               >
                 내 여행 만들기
