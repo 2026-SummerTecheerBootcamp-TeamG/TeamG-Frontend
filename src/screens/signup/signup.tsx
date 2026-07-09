@@ -9,7 +9,7 @@ export const Signup = (): JSX.Element => {
 
   const handleSignup = () => {
     // TODO: 실제 회원가입 API 호출 후 성공 시 이동하도록 교체
-    navigate("/");
+    navigate("/planning-room"); // 회원가입 성공 시 이동할 경로
   };
 
   return (

@@ -109,7 +109,7 @@ export const Element = (): JSX.Element => {
               <div className="absolute left-28.5 top-68.75 h-28 w-178 rounded-[35px] border-[3px] border-black bg-white shadow-[2px_5px_2px_0px_rgba(0,0,0,1.00)]" />
               <p className="absolute left-[164.5px] top-78.25 text-3xl font-bold text-black font-['Pretendard',Helvetica]">후쿠오카 3박 4일 여행, 100만원</p>
               <div className="absolute left-153.5 top-76.25 h-13 w-[0.1px] border border-black bg-black" />
-              <button type="button" onClick={() => window.location.href = '/login'} className="absolute left-[692.5px] top-74.5 flex h-16 w-22 items-center justify-center rounded-[10px] bg-rose-600">
+              <button type="button" onClick={() => window.location.href = '/login'} className="absolute left-[692.5px] top-74.5 hover:opacity-70 flex h-16 w-22 items-center justify-center rounded-[10px] bg-rose-600">
                 <ArrowRight className="h-8 w-8 text-white" strokeWidth={2.5} />
               </button>
               <button
