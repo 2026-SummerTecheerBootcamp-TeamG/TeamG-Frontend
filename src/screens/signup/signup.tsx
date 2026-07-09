@@ -14,7 +14,7 @@ export const Signup = (): JSX.Element => {
 
   return (
     <main className="flex min-h-screen w-full items-center justify-center bg-white px-6 py-12">
-      <section className="flex w-full max-w-[553px] flex-col">
+      <section className="flex w-full max-w-138.25 flex-col">
         {/* 헤더 부분 */}
         <header className="mb-10 flex w-full flex-col">
           <h1 className="text-[48px] font-bold text-black font-['Pretendard']">
@@ -32,7 +32,7 @@ export const Signup = (): JSX.Element => {
               <label className="text-[18px] font-bold text-zinc-400 font-['Pretendard']">이름</label>
               <Input
                 type="text"
-                className="h-[96px] w-[553px] rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] !text-[24px] font-bold font-['Pretendard'] focus:outline-none"
+                className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] text-[24px]! font-bold font-['Pretendard'] focus:outline-none"
               />
             </div>
 
@@ -41,7 +41,7 @@ export const Signup = (): JSX.Element => {
               <label className="text-[18px] font-bold text-zinc-400 font-['Pretendard']">이메일</label>
               <Input
                 type="email"
-                className="h-[96px] w-[553px] rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] !text-[24px] font-bold font-['Pretendard'] focus:outline-none"
+                className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] text-[24px]! font-bold font-['Pretendard'] focus:outline-none"
               />
             </div>
 
@@ -50,7 +50,7 @@ export const Signup = (): JSX.Element => {
               <label className="text-[18px] font-bold text-zinc-400 font-['Pretendard']">비밀번호</label>
               <Input
                 type="password"
-                className="h-[96px] w-[553px] rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] !text-[24px] font-bold font-['Pretendard'] focus:outline-none"
+                className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] text-[24px]! font-bold font-['Pretendard'] focus:outline-none"
               />
             </div>
 
@@ -59,7 +59,7 @@ export const Signup = (): JSX.Element => {
               <label className="text-[18px] font-bold text-zinc-400 font-['Pretendard']">국적</label>
               <Input
                 type="text"
-                className="h-[96px] w-[553px] rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] !text-[24px] font-bold font-['Pretendard'] focus:outline-none"
+                className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] text-[24px]! font-bold font-['Pretendard'] focus:outline-none"
               />
             </div>
 
@@ -68,14 +68,14 @@ export const Signup = (): JSX.Element => {
               <label className="text-[18px] font-bold text-zinc-400 font-['Pretendard']">기본 출발지</label>
               <Input
                 type="text"
-                className="h-[96px] w-[553px] rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] !text-[24px] font-bold font-['Pretendard'] focus:outline-none"
+                className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] text-[24px]! font-bold font-['Pretendard'] focus:outline-none"
               />
             </div>
 
             {/* 가입 완료 버튼 */}
             <Button
               onClick={handleSignup}
-              className="h-[96px] w-[553px] rounded-[10px] border-[2.5px] border-black bg-rose-600 text-[30px] font-bold text-white hover:bg-rose-700 font-['Pretendard']"
+              className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-rose-600 text-[30px] font-bold text-white hover:bg-rose-700 font-['Pretendard']"
             >
               가입 완료
             </Button>
