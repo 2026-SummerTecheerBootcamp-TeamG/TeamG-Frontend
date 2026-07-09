@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Plane, Star, Plus, Check } from "lucide-react";
 import { FaWonSign } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import logo from "../../assets/img/logo.jpg";
 
 const DESIGN_WIDTH = 1920;
 const DESIGN_HEIGHT = 1080;
@@ -67,17 +68,22 @@ export const Element = (): JSX.Element => {
             marginRight: "auto",
           }}
         >
-          <main className="relative h-[1080px] w-[1920px] overflow-hidden bg-white">
+          <main className="relative h-270 w-[1920px] overflow-hidden bg-white">
             <header className="absolute left-0 top-0 h-14 w-[1920px] border-b border-black bg-white">
-              <div className="absolute left-[103px] top-[20px] h-10 w-22 origin-top-left -rotate-[15.93deg] rounded-full border border-white bg-rose-600" />
-              <div className="absolute left-[133px] top-[15px] w-16 text-xl font-bold text-orange-50 [font-family:'Pretendard',Helvetica]">로고</div>
+              <div className="absolute left-27.25 top-1.75 w-12 font-['Pretendard',Helvetica]"><img src={logo} className="h-full w-full" /></div>
 
               {/* 프로젝트 제목 버튼 (예: 홈으로 이동) */}
               <button
                 type="button"
-                className="absolute left-[210px] top-[13px] h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-black transition-opacity hover:opacity-70 [font-family:'Pretendard',Helvetica]"
+                className="absolute left-42.5 top-3.25 h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-rose-600 transition-opacity hover:opacity-70 font-['Pretendard',Helvetica]"
               >
-                프로젝트 제목
+                Trip
+              </button>
+              <button
+                type="button"
+                className="absolute left-54.5 top-3.25 h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-black transition-opacity hover:opacity-70 font-['Pretendard',Helvetica]"
+              >
+                Canvas
               </button>
 
               <nav aria-label="주요 메뉴">
@@ -86,7 +92,7 @@ export const Element = (): JSX.Element => {
                     key={item.label}
                     to = {item.href}
                     type="button"
-                    className={`absolute cursor-pointer bg-transparent text-xl font-bold text-black transition-opacity hover:opacity-70 [font-family:'Pretendard',Helvetica] ${item.className}`}
+                    className={`absolute cursor-pointer bg-transparent text-xl font-bold text-black transition-opacity hover:opacity-70 font-['Pretendard',Helvetica] ${item.className}`}
                   >
                     {item.label}
                   </Link>
@@ -95,66 +101,66 @@ export const Element = (): JSX.Element => {
             </header>
 
             <section aria-label="히어로 섹션">
-              <h1 className="absolute left-[114px] top-[210px] text-4xl font-bold text-black [font-family:'Pretendard',Helvetica]">여행 계획은</h1>
-              <h1 className="absolute left-[120px] top-[416px] text-4xl font-bold text-black [font-family:'Inter',Helvetica]">이 한 줄로 끝.</h1>
-              <p className="absolute left-[114px] top-[508.5px] text-xl font-semibold text-neutral-400 [font-family:'Inter',Helvetica]">
+              <h1 className="absolute left-28.5 top-52.5 text-4xl font-bold text-black font-['Pretendard',Helvetica]">여행 계획은</h1>
+              <h1 className="absolute left-30 top-104 text-4xl font-bold text-black font-['Inter',Helvetica]">이 한 줄로 끝.</h1>
+              <p className="absolute left-28.5 top-[508.5px] text-xl font-semibold text-neutral-400 font-['Inter',Helvetica]">
                 엔터를 누르는 순간, 네 개의 AI 에이전트가 <br /> 항공 • 숙소 • 일정 • 예산을 동시에 설계해요.
               </p>
-              <div className="absolute left-[114px] top-[275px] h-28 w-[712px] rounded-[35px] border-[3px] border-black bg-white shadow-[2px_5px_2px_0px_rgba(0,0,0,1.00)]" />
-              <p className="absolute left-[164.5px] top-[313px] text-3xl font-bold text-black [font-family:'Pretendard',Helvetica]">후쿠오카 3박 4일 여행, 100만원</p>
-              <div className="absolute left-[614px] top-[305px] h-13 w-[0.1px] border-[1px] border-black bg-black" />
-              <button type="button" onClick={() => window.location.href = '/login'} className="absolute left-[692.5px] top-[298px] flex h-16 w-[88px] items-center justify-center rounded-[10px] bg-rose-600">
+              <div className="absolute left-28.5 top-68.75 h-28 w-178 rounded-[35px] border-[3px] border-black bg-white shadow-[2px_5px_2px_0px_rgba(0,0,0,1.00)]" />
+              <p className="absolute left-[164.5px] top-78.25 text-3xl font-bold text-black font-['Pretendard',Helvetica]">후쿠오카 3박 4일 여행, 100만원</p>
+              <div className="absolute left-153.5 top-76.25 h-13 w-[0.1px] border border-black bg-black" />
+              <button type="button" onClick={() => window.location.href = '/login'} className="absolute left-[692.5px] top-74.5 flex h-16 w-22 items-center justify-center rounded-[10px] bg-rose-600">
                 <ArrowRight className="h-8 w-8 text-white" strokeWidth={2.5} />
               </button>
               <button
                 type="button"
                 onClick={() => window.location.href = '/login'}
-                className="absolute left-[114px] top-[605.5px] h-24 w-[374px] rounded-[40px] border-[3px] border-black bg-rose-600 text-3xl font-semibold text-white [font-family:'Inter',Helvetica] shadow-[0px_10px_2px_0px_rgba(0,0,0,1.00)] transition-all duration-150 ease-out hover:translate-y-[4px] hover:shadow-[0px_6px_2px_0px_rgba(0,0,0,1.00)] active:translate-y-[10px] active:shadow-[0px_0px_2px_0px_rgba(0,0,0,1.00)]"
+                className="absolute left-28.5 top-[605.5px] h-24 w-93.5 rounded-[40px] border-[3px] border-black bg-rose-600 text-3xl font-semibold text-white font-['Inter',Helvetica] shadow-[0px_10px_2px_0px_rgba(0,0,0,1.00)] transition-all duration-150 ease-out hover:translate-y-1 hover:shadow-[0px_6px_2px_0px_rgba(0,0,0,1.00)] active:translate-y-2.5 active:shadow-[0px_0px_2px_0px_rgba(0,0,0,1.00)]"
               >
                 내 여행 만들기
               </button>
             </section>
 
             <section aria-label="예산 및 항공 카드">
-              <div className="absolute left-[1317px] top-[225.34px] z-10 h-48 w-[338.6px] origin-top-left -rotate-[19.20deg] rounded-[20px] border-[3px] border-black bg-white shadow-[7px_9px_2px_0px_rgba(0,0,0,0.25)]" />
+              <div className="absolute left-329.25 top-[225.34px] z-10 h-48 w-[338.6px] origin-top-left rotate-[-19.2deg] rounded-[20px] border-[3px] border-black bg-white shadow-[7px_9px_2px_0px_rgba(0,0,0,0.25)]" />
               {flightTexts.map((item) => (
-                <p key={item.text} className={`absolute z-10 origin-top-left -rotate-[19.20deg] [font-family:'Pretendard',Helvetica] ${item.className}`}>
+                <p key={item.text} className={`absolute z-10 origin-top-left rotate-[-19.2deg] font-['Pretendard',Helvetica] ${item.className}`}>
                   {item.text}
                 </p>
               ))}
-              <div className="absolute left-[1438.1px] top-[287.04px] z-10 h-0 w-28 origin-top-left -rotate-[19.20deg] border-t-2 border-dashed border-black" />
-              <FaWonSign className="absolute left-[1393.8px] top-[360.97px] z-10 h-6 w-6 origin-top-left -rotate-[19.20deg] text-black" />
-              <Plane className="absolute left-[1559px] top-[232.32px] z-10 h-5 w-5 origin-top-left -rotate-[-24.0deg] text-black" />
-              <div className="absolute left-[1251.5px] top-[165.6px] z-20 h-16 w-55 origin-top-left -rotate-[10.05deg] rounded-[35px] border-[3px] border-black bg-white" />
-              <div className="absolute left-[1267.6px] top-[172.4px] z-20 h-12 w-48 origin-top-left -rotate-[10.05deg] rounded-[35px] border-[3px] border-black bg-rose-600" />
-              <p className="absolute left-[1306.4px] top-[173.67px] z-20 h-7 w-36 origin-top-left -rotate-[10.05deg] text-2xl font-semibold text-white [font-family:'Pretendard',Helvetica]">예산 여유 9만</p>
-              <Check className="absolute left-[1277.5px] top-[186.5px] z-20 h-5 w-7 origin-top-left -rotate-[10.05deg] text-white" strokeWidth={3} />
-              <div className="absolute left-[1566.55px] top-[163.33px] z-20 h-7 w-16 origin-top-left -rotate-[17.68deg] rounded-[35px] border border-black bg-rose-600" />
-              <p className="absolute left-[1585px] top-[160.89px] z-20 origin-top-left -rotate-[17.68deg] text-base font-semibold text-white [font-family:'Pretendard',Helvetica]">확정</p>
-              <div className="absolute left-[1098px] top-[365.54px] h-[241.78px] w-[510.18px] origin-top-left rotate-2 rounded-[20px] border-[3px] border-black bg-white shadow-[7px_9px_2px_0px_rgba(0,0,0,0.25)]" />
-              <div className="absolute left-[1130.65px] top-[441.68px] h-[104px] w-[104px] origin-top-left rotate-[1.51deg] rounded-[15px] bg-gradient-to-b from-yellow-400 to-orange-300" />
-              <p className="absolute left-[1256.6px] top-[445.01px] origin-top-left rotate-[1.51deg] text-2xl font-bold text-zinc-500 [font-family:'Pretendard',Helvetica]">숙소 • 후보 1/3</p>
-              <p className="absolute left-[1255.75px] top-[477.5px] origin-top-left rotate-[1.51deg] text-3xl font-bold text-black [font-family:'Pretendard',Helvetica]">코튼빌리지 프리미엄 호텔</p>
+              <div className="absolute left-[1438.1px] top-[287.04px] z-10 h-0 w-28 origin-top-left rotate-[-19.2deg] border-t-2 border-dashed border-black" />
+              <FaWonSign className="absolute left-[1393.8px] top-[360.97px] z-10 h-6 w-6 origin-top-left rotate-[-19.2deg] text-black" />
+              <Plane className="absolute left-[1559px] top-[232.32px] z-10 h-5 w-5 origin-top-left rotate-24 text-black" />
+              <div className="absolute left-[1251.5px] top-[165.6px] z-20 h-16 w-55 origin-top-left rotate-[-10.05deg] rounded-[35px] border-[3px] border-black bg-white" />
+              <div className="absolute left-[1267.6px] top-[172.4px] z-20 h-12 w-48 origin-top-left rotate-[-10.05deg] rounded-[35px] border-[3px] border-black bg-rose-600" />
+              <p className="absolute left-[1306.4px] top-[173.67px] z-20 h-7 w-36 origin-top-left rotate-[-10.05deg] text-2xl font-semibold text-white font-['Pretendard',Helvetica]">예산 여유 9만</p>
+              <Check className="absolute left-[1277.5px] top-[183.5px] z-20 h-5 w-7 origin-top-left rotate-[-4.05deg] text-white" strokeWidth={3} />
+              <div className="absolute left-[1566.55px] top-[163.33px] z-20 h-7 w-16 origin-top-left rotate-[-19.2deg] rounded-[35px] border border-black bg-rose-600" />
+              <p className="absolute left-[1585px] top-[160.89px] z-20 origin-top-left rotate-[-19.2deg] text-base font-semibold text-white font-['Pretendard',Helvetica]">확정</p>
+              <div className="absolute left-274.5 top-[365.54px] h-[241.78px] w-[510.18px] origin-top-left rotate-2 rounded-[20px] border-[3px] border-black bg-white shadow-[7px_9px_2px_0px_rgba(0,0,0,0.25)]" />
+              <div className="absolute left-[1130.65px] top-[441.68px] h-26 w-26 origin-top-left rotate-[1.51deg] rounded-[15px] bg-linear-to-b from-yellow-400 to-orange-300" />
+              <p className="absolute left-[1256.6px] top-[445.01px] origin-top-left rotate-[1.51deg] text-2xl font-bold text-zinc-500 font-['Pretendard',Helvetica]">숙소 • 후보 1/3</p>
+              <p className="absolute left-[1255.75px] top-[477.5px] origin-top-left rotate-[1.51deg] text-3xl font-bold text-black font-['Pretendard',Helvetica]">코튼빌리지 프리미엄 호텔</p>
               {stayStarPositions.map((pos) => (
                 <Star key={pos} className={`absolute h-6 w-6 origin-top-left rotate-[1.51deg] fill-black text-black ${pos}`} />
               ))}
-              <p className="absolute left-[1331.33px] top-[532.01px] origin-top-left rotate-[1.51deg] text-2xl font-bold text-zinc-500 [font-family:'Pretendard',Helvetica]">쇼핑가 도보 5 분</p>
+              <p className="absolute left-[1331.33px] top-[532.01px] origin-top-left rotate-[1.51deg] text-2xl font-bold text-zinc-500 font-['Pretendard',Helvetica]">쇼핑가 도보 5 분</p>
             </section>
 
             <section aria-label="일정 카드">
               <div className="absolute left-[1157.31px] top-[585.5px] h-[241.78px] w-[488.18px] origin-top-left rotate-[6.37deg] rounded-[20px] border-[3px] border-black bg-white shadow-[7px_9px_2px_0px_rgba(0,0,0,0.25)]" />
-              <p className="absolute left-[1193.22px] top-[621.3px] origin-top-left rotate-[6.52deg] text-2xl font-bold text-zinc-500 [font-family:'Pretendard',Helvetica]">DAY 2</p>
+              <p className="absolute left-[1193.22px] top-[621.3px] origin-top-left rotate-[6.52deg] text-2xl font-bold text-zinc-500 font-['Pretendard',Helvetica]">DAY 2</p>
               {itineraryPills.map((item) => (
                 <div key={item.text}>
                   <div className={`absolute origin-top-left rotate-[6.54deg] rounded-[40px] border-[3px] border-black bg-orange-100 ${item.boxClassName}`} />
-                  <p className={`absolute origin-top-left rotate-[6.52deg] text-2xl font-bold text-black [font-family:'Pretendard',Helvetica] ${item.textClassName}`}>
+                  <p className={`absolute origin-top-left rotate-[6.52deg] text-2xl font-bold text-black font-['Pretendard',Helvetica] ${item.textClassName}`}>
                     {item.text}
                   </p>
                 </div>
               ))}
-              <div className="absolute left-[1164.7px] top-[752px] h-16 w-48 origin-top-left rotate-[6.52deg] rounded-[40px] border-4 border-dashed border-red-500 bg-white" />
-              <Plus className="absolute left-[1188.1px] top-[774.89px] h-6 w-6 origin-top-left rotate-[6.52deg] text-red-500" strokeWidth={2.5} />
-              <p className="absolute left-[1219px] top-[776px] origin-top-left rotate-[6.52deg] text-2xl font-bold text-red-500 [font-family:'Pretendard',Helvetica]">맛집 탐색...</p>
+              <div className="absolute left-[1160.1px] top-187 h-16 w-48 origin-top-left rotate-[6.52deg] rounded-[40px] border-4 border-dashed border-red-500 bg-white" />
+              <Plus className="absolute left-[1180.1px] top-[772.89px] h-6 w-6 origin-top-left rotate-[6.52deg] text-red-500" strokeWidth={2.5} />
+              <p className="absolute left-302.75 top-193 origin-top-left rotate-[6.52deg] text-2xl font-bold text-red-500 font-['Pretendard',Helvetica]">맛집 탐색...</p>
             </section>
           </main>
         </div>
