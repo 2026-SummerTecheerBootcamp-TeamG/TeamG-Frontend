@@ -4,13 +4,14 @@ import { ArrowRight, Plane, Star, Plus, Check } from "lucide-react";
 import { FaWonSign } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import logo from "../../assets/img/logo.jpg";
+import { useNavigate } from "react-router-dom";
 
 const DESIGN_WIDTH = 1920;
 const DESIGN_HEIGHT = 1080;
 
 const navItems = [
-  { label: "로그인", href: "/login", className: "left-[1608.5px] top-[15px]" },
-  { label: "회원가입", href: "/signup", className: "left-[1737px] top-[15px]" },
+  { label: "로그인", href: "/login", className: "left-[1620.5px] top-[15px]" },
+  { label: "회원가입", href: "/signup", className: "left-[1749px] top-[15px]" },
 ];
 
 const flightTexts = [
@@ -54,6 +55,7 @@ function useResponsiveScale() {
 export const Element = (): JSX.Element => {
   const scale = useResponsiveScale();
   const scaledHeight = DESIGN_HEIGHT * scale;
+  const navigate = useNavigate();
 
   return (
     <div className="m-0 h-dvh w-full overflow-hidden bg-white p-0">
@@ -70,21 +72,12 @@ export const Element = (): JSX.Element => {
         >
           <main className="relative h-270 w-[1920px] overflow-hidden bg-white">
             <header className="absolute left-0 top-0 h-14 w-[1920px] border-b border-black bg-white">
-              <div className="absolute left-27.25 top-1.75 w-12 font-['Pretendard',Helvetica]"><img src={logo} className="h-full w-full" /></div>
+              <div className="absolute left-17.25 top-1.75 w-12 font-['Pretendard',Helvetica]"><img src={logo} className="h-full w-full" /></div>
 
               {/* 프로젝트 제목 버튼 (예: 홈으로 이동) */}
-              <button
-                type="button"
-                className="absolute left-42.5 top-3.25 h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-rose-600 transition-opacity hover:opacity-70 font-['Pretendard',Helvetica]"
-              >
-                Trip
-              </button>
-              <button
-                type="button"
-                className="absolute left-54.5 top-3.25 h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-black transition-opacity hover:opacity-70 font-['Pretendard',Helvetica]"
-              >
-                Canvas
-              </button>
+              <button type="button" onClick={() => navigate("/")} className="absolute left-32.5 top-3.25 h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-rose-600 transition-opacity hover:opacity-70 font-['Pretendard',Helvetica]">Trip</button>
+              <button type="button" onClick={() => navigate("/")} className="absolute left-44.5 top-3.25 h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-black transition-opacity hover:opacity-70 font-['Pretendard',Helvetica]">Canvas</button>
+
 
               <nav aria-label="주요 메뉴">
                 {navItems.map((item) => (

@@ -69,51 +69,15 @@ export const PlanningRoom = (): JSX.Element => {
           <main className="relative h-[1080px] w-[1920px] overflow-hidden bg-white">
             {/* ===== 헤더 ===== */}
             <header className="absolute left-0 top-[0px] h-14 z-20 w-full border-b border-black bg-white">
-              <div className="absolute left-27.25 top-1.75 w-12 font-['Pretendard',Helvetica]"><img src={logo} className="h-full w-full" /></div>
-              <button
-                type="button"
-                onClick={() => navigate("/")}
-                className="absolute left-42.5 top-3.25 h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-rose-600 transition-opacity hover:opacity-70 font-['Pretendard',Helvetica]"
-              >
-                Trip
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/")}
-                className="absolute left-54.5 top-3.25 h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-black transition-opacity hover:opacity-70 font-['Pretendard',Helvetica]"
-              >
-                Canvas
-              </button>
+              <div className="absolute left-17.25 top-1.75 w-12 font-['Pretendard',Helvetica]"><img src={logo} className="h-full w-full" /></div>
+              <button type="button" onClick={() => navigate("/")} className="absolute left-32.5 top-3.25 h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-rose-600 transition-opacity hover:opacity-70 font-['Pretendard',Helvetica]">Trip</button>
+              <button type="button" onClick={() => navigate("/")} className="absolute left-44.5 top-3.25 h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-black transition-opacity hover:opacity-70 font-['Pretendard',Helvetica]">Canvas</button>
 
               <nav aria-label="주요 메뉴">
-                <button
-                  type="button"
-                  onClick={() => navigate("/my-trips")}
-                  className="absolute left-[393px] top-[15px] cursor-pointer bg-transparent text-xl font-bold text-black hover:opacity-70 [font-family:'Pretendard',Helvetica]"
-                >
-                  내 여행
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/planning-room")}
-                  className="absolute left-[542px] top-[15px] cursor-pointer bg-transparent text-xl font-bold text-black hover:opacity-70 [font-family:'Pretendard',Helvetica]"
-                >
-                  플래닝 룸
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/")}
-                  className="absolute left-[1608.5px] top-[15px] z-20 cursor-pointer bg-transparent text-xl font-semibold text-neutral-500 hover:opacity-70 [font-family:'Pretendard',Helvetica]"
-                >
-                  로그아웃
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/my-page")}
-                  className="absolute left-[1737px] top-[15px] z-20 cursor-pointer bg-transparent text-xl font-bold text-black hover:opacity-70 [font-family:'Pretendard',Helvetica]"
-                >
-                  마이 페이지
-                </button>
+                <button type="button" onClick={() => navigate("/my-trips")} className="absolute left-[363px] top-[15px] cursor-pointer bg-transparent text-xl font-bold text-black hover:opacity-70 [font-family:'Pretendard',Helvetica]">내 여행</button>
+                <button type="button" onClick={() => navigate("/planning-room")} className="absolute left-[512px] top-[15px] cursor-pointer bg-transparent text-xl font-bold text-black hover:opacity-70 [font-family:'Pretendard',Helvetica]">플래닝 룸</button>
+                <button type="button" onClick={() => navigate("/")} className="absolute left-[1620.5px] top-[15px] z-20 cursor-pointer bg-transparent text-xl font-semibold text-neutral-500 hover:opacity-70 [font-family:'Pretendard',Helvetica]">로그아웃</button>
+                <button type="button" onClick={() => navigate("/my-page")} className="absolute left-[1749px] top-[15px] z-20 cursor-pointer bg-transparent text-xl font-bold text-black hover:opacity-70 [font-family:'Pretendard',Helvetica]">마이 페이지</button>
               </nav>
             </header>
 
