@@ -3,12 +3,7 @@ import { useEffect, useState } from "react";
 import {
   MessageCircle,
   Send,
-  Bot,
-  User,
-  Plane,
-  Check,
   ChevronRight,
-  Star,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/img/logo.jpg";
@@ -188,7 +183,8 @@ export const PlanningRoom = (): JSX.Element => {
               {/* 계획 확정 버튼 */}
               <button
                 type="button"
-                className="absolute left-[457.8px] top-[797px] z-10 h-10 w-32 rounded-[20px] shadow-[0px_2px_0px_0px_rgba(0,0,0,1.00)] border-2 border-black bg-pink-400 text-lg font-bold text-black transition-all hover:brightness-95 active:translate-y-[2px] active:translate-y-2.5 active:shadow-[0px_0px_2px_0px_rgba(0,0,0,1.00)] [font-family:'Pretendard',Helvetica]"
+                onClick={() => navigate("/plan-confirm")}
+                className="absolute left-[457.8px] top-[797px] z-10 h-10 w-32 rounded-[20px] shadow-[0px_2px_0px_0px_rgba(0,0,0,1.00)] border-2 border-black bg-pink-400 text-lg font-bold text-black transition-all hover:brightness-95 hover:translate-y-[2px] hover:translate-y-2.5 hover:shadow-[0px_0px_2px_0px_rgba(0,0,0,1.00)] [font-family:'Pretendard',Helvetica]"
               >
                 계획 확정
               </button>
