@@ -4,6 +4,7 @@ import { Login } from "./screens/login/login.tsx";
 import { Signup } from "./screens/signup/index.ts";
 import { PlanningRoom } from "./screens/PlanningRoom/index.ts";
 import { MyPage } from "./screens/MyPage/index.ts";
+import { PlanConfirm } from "./screens/PlanConfirm/index.ts";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/planning-room" element={<PlanningRoom />} />
       <Route path="/my-page" element={<MyPage />} />
+      <Route path="/plan-confirm" element={<PlanConfirm />} />
     </Routes>
   );
 }
