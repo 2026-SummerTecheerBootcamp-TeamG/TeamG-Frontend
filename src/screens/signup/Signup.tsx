@@ -8,6 +8,8 @@ import {
 } from "@/components/auth/AuthForm";
 import { useAuth } from "@/context/AuthContext";
 import { COUNTRIES, findCountry } from "@/screens/signup/countries";
+import { signupRequest, loginRequest } from "@/api/auth";
+import { extractFieldErrors, firstError } from "@/lib/api";
 
 export default function Signup() {
   const { login } = useAuth();
@@ -22,6 +24,7 @@ export default function Signup() {
     departure: "서울|ICN",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 선택된 국적의 공항 목록 (국적이 바뀌면 자동으로 다시 계산됨)
   const availableAirports = useMemo(
@@ -43,7 +46,7 @@ export default function Signup() {
     }));
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     const next: Record<string, string> = {};
@@ -59,18 +62,41 @@ export default function Signup() {
     if (Object.keys(next).length > 0) return;
 
     const [city, iata] = form.departure.split("|");
-    const nationalityName = findCountry(form.nationalityCode)?.name ?? "";
 
-    // TODO: POST /api/v1/auth/signup → POST /api/v1/auth/login 연동 후 교체
-    login({
-      userId: 1,
-      nickname: form.nickname,
-      email: form.email,
-      nationality: nationalityName,
-      defaultDeparture: { city, iata },
-    });
+    setIsSubmitting(true);
+    try {
+      // 1) 회원가입 — SignupSerializer는 유저만 생성하고 토큰은 내려주지 않음
+      await signupRequest({
+        email: form.email,
+        password: form.password,
+        nickname: form.nickname,
+        nationality: form.nationalityCode,
+        default_departure: { city, iata },
+      });
 
-    navigate("/", { replace: true });
+      // 2) 가입 직후 자동 로그인 — LoginSerializer가 access_token/refresh_token 발급
+      const { access_token, refresh_token } = await loginRequest({
+        email: form.email,
+        password: form.password,
+      });
+
+      // 3) 발급받은 토큰으로 AuthContext에 로그인 처리
+      //    (내부에서 토큰 저장 + /users/me/profile 조회까지 함께 수행됨)
+      await login(access_token, refresh_token);
+
+      navigate("/", { replace: true });
+    } catch (err) {
+      const fieldErrors = extractFieldErrors(err);
+      setErrors({
+        email: firstError(fieldErrors, "email") ?? "",
+        password: firstError(fieldErrors, "password") ?? "",
+        nickname: firstError(fieldErrors, "nickname") ?? "",
+        nationality: firstError(fieldErrors, "nationality") ?? "",
+        form: firstError(fieldErrors, "detail") ?? "",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -123,7 +149,7 @@ export default function Signup() {
         <SelectField
           label="기본 출발지"
           value={form.departure}
-          //error={errors.departure}
+          error={errors.departure}
           disabled={availableAirports.length === 0}
           onChange={(e) => set("departure", e.target.value)}
         >
@@ -138,7 +164,9 @@ export default function Signup() {
           )}
         </SelectField>
 
-        <SubmitButton>가입하기</SubmitButton>
+        <SubmitButton disabled={isSubmitting}>
+          {isSubmitting ? "가입 처리 중..." : "가입하기"}
+        </SubmitButton>
       </form>
 
       <p className="mt-5 text-center text-[13px] text-ink-3">

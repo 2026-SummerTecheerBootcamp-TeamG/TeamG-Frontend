@@ -4,14 +4,12 @@ import axios from "axios";
  * Django REST Framework 백엔드용 API 클라이언트
  *
  * - baseURL은 .env의 VITE_API_BASE_URL로 환경별(local/dev/prod) 분리
- * - withCredentials: true → 백엔드가 refresh 토큰 등을 httpOnly 쿠키로 내려줄 가능성에 대비
- *   (현재 LoginSerializer는 access_token만 응답하므로 당장은 필요 없지만,
- *    나중에 쿠키 기반 refresh를 추가해도 프론트 수정 없이 동작하도록 미리 켜둠)
+ * - 인증은 쿠키가 아니라 순수 JWT Bearer 헤더 방식이라 withCredentials는 사용하지 않음
+ *   (덕분에 백엔드 CORS 설정도 CORS_ALLOW_CREDENTIALS 없이 CORS_ALLOWED_ORIGINS만으로 충분)
  */
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1",
   headers: { "Content-Type": "application/json" },
-  withCredentials: true,
 });
 
 const ACCESS_TOKEN_KEY = "tripcanvas_access_token";
@@ -54,8 +52,7 @@ const requestNewAccessToken = async (): Promise<string> => {
   // SimpleJWT 기본 TokenRefreshView 응답 형태: { access: "...", refresh?: "..." } (ROTATE_REFRESH_TOKENS 설정 시 refresh도 갱신됨)
   const { data } = await axios.post<{ access: string; refresh?: string }>(
     `${api.defaults.baseURL}/auth/refresh`,
-    { refresh },
-    { withCredentials: true }
+    { refresh }
   );
   tokenStorage.set(data.access, data.refresh);
   return data.access;
