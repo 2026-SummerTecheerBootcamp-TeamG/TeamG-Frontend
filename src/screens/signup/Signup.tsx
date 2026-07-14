@@ -1,100 +1,136 @@
-import type { JSX } from "react/jsx-runtime";
-import { useNavigate } from "react-router-dom";
-import { Button } from "../../components/ui/button_login.tsx";
-import { Card, CardContent } from "../../components/ui/card.tsx";
-import { Input } from "../../components/ui/input.tsx";
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  AuthCard,
+  Field,
+  SelectField,
+  SubmitButton,
+} from "@/components/auth/AuthForm";
+import { useAuth } from "@/context/AuthContext";
 
-export const Signup = (): JSX.Element => {
+/** 기본 출발지 선택지 */
+const DEPARTURES = [
+  { city: "서울", iata: "ICN" },
+  { city: "부산", iata: "PUS" },
+  { city: "제주", iata: "CJU" },
+  { city: "대구", iata: "TAE" },
+];
+
+const NATIONS = ["대한민국", "일본", "미국", "대만", "베트남"];
+
+export default function Signup() {
+  const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSignup = () => {
-    // TODO: 실제 회원가입 API 호출 후 성공 시 이동하도록 교체
-    navigate("/planning-room"); // 회원가입 성공 시 이동할 경로
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+    passwordConfirm: "",
+    nickname: "",
+    nationality: "대한민국",
+    departure: "서울|ICN",
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const set = (key: string, value: string) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+
+    const next: Record<string, string> = {};
+    if (!form.email.includes("@")) next.email = "이메일 형식이 올바르지 않습니다.";
+    if (form.password.length < 8)
+      next.password = "비밀번호는 8자 이상이어야 합니다.";
+    if (form.password !== form.passwordConfirm)
+      next.passwordConfirm = "비밀번호가 일치하지 않습니다.";
+    if (!form.nickname.trim()) next.nickname = "닉네임을 입력해주세요.";
+
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+
+    const [city, iata] = form.departure.split("|");
+
+    // TODO: POST /api/v1/auth/signup → POST /api/v1/auth/login 연동 후 교체
+    login({
+      userId: 1,
+      nickname: form.nickname,
+      email: form.email,
+      nationality: form.nationality,
+      defaultDeparture: { city, iata },
+    });
+
+    navigate("/", { replace: true });
   };
 
   return (
-    <main className="flex min-h-screen w-full items-center justify-center bg-white px-6 py-12">
-      <section className="flex w-full max-w-138.25 flex-col">
-        {/* 헤더 부분 */}
-        <header className="mb-10 flex w-full flex-col">
-          <h1 className="text-[48px] font-bold text-black font-['Pretendard']">
-            회원가입
-          </h1>
-          <p className="mt-4 text-[24px] font-bold text-zinc-400/50 font-['Pretendard']">
-            저장된 계획과 여행 취향을 그대로 이어서.
-          </p>
-        </header>
+    <AuthCard title="회원가입" desc="기본 출발지를 정해두면 계획을 짤 때 바로 반영됩니다.">
+      <form onSubmit={handleSubmit} noValidate>
+        <Field
+          label="이메일"
+          type="email"
+          value={form.email}
+          placeholder="you@example.com"
+          autoComplete="email"
+          error={errors.email}
+          onChange={(e) => set("email", e.target.value)}
+        />
+        <Field
+          label="비밀번호"
+          type="password"
+          value={form.password}
+          placeholder="8자 이상"
+          autoComplete="new-password"
+          error={errors.password}
+          onChange={(e) => set("password", e.target.value)}
+        />
+        <Field
+          label="비밀번호 확인"
+          type="password"
+          value={form.passwordConfirm}
+          autoComplete="new-password"
+          error={errors.passwordConfirm}
+          onChange={(e) => set("passwordConfirm", e.target.value)}
+        />
+        <Field
+          label="닉네임"
+          value={form.nickname}
+          placeholder="트립캔버스에서 쓸 이름"
+          error={errors.nickname}
+          onChange={(e) => set("nickname", e.target.value)}
+        />
+        <SelectField
+          label="국적"
+          value={form.nationality}
+          onChange={(e) => set("nationality", e.target.value)}
+        >
+          {NATIONS.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField
+          label="기본 출발지"
+          value={form.departure}
+          onChange={(e) => set("departure", e.target.value)}
+        >
+          {DEPARTURES.map((d) => (
+            <option key={d.iata} value={`${d.city}|${d.iata}`}>
+              {d.city} ({d.iata})
+            </option>
+          ))}
+        </SelectField>
 
-        <Card className="w-full border-0 bg-transparent shadow-none">
-          <CardContent className="flex flex-col gap-8 p-0">
-            {/* 이름 입력창 */}
-            <div className="flex flex-col gap-3">
-              <label className="text-[18px] font-bold text-zinc-400 font-['Pretendard']">이름</label>
-              <Input
-                type="text"
-                className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] text-[24px]! font-bold font-['Pretendard'] focus:outline-none"
-              />
-            </div>
+        <SubmitButton>가입하기</SubmitButton>
+      </form>
 
-            {/* 이메일 입력창 */}
-            <div className="flex flex-col gap-3">
-              <label className="text-[18px] font-bold text-zinc-400 font-['Pretendard']">이메일</label>
-              <Input
-                type="email"
-                className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] text-[24px]! font-bold font-['Pretendard'] focus:outline-none"
-              />
-            </div>
-
-            {/* 비밀번호 입력창 */}
-            <div className="flex flex-col gap-3">
-              <label className="text-[18px] font-bold text-zinc-400 font-['Pretendard']">비밀번호</label>
-              <Input
-                type="password"
-                className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] text-[24px]! font-bold font-['Pretendard'] focus:outline-none"
-              />
-            </div>
-
-            {/* 국적 입력창 */}
-            <div className="flex flex-col gap-3">
-              <label className="text-[18px] font-bold text-zinc-400 font-['Pretendard']">국적</label>
-              <Input
-                type="text"
-                className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] text-[24px]! font-bold font-['Pretendard'] focus:outline-none"
-              />
-            </div>
-
-            {/* 기본 출발지 입력창 */}
-            <div className="flex flex-col gap-3">
-              <label className="text-[18px] font-bold text-zinc-400 font-['Pretendard']">기본 출발지</label>
-              <Input
-                type="text"
-                className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-white transition-all duration-150 hover:border-rose-600 hover:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] focus:border-rose-600 focus:shadow-[5px_5px_10px_0px_rgba(127,3,3,0.5)] text-[24px]! font-bold font-['Pretendard'] focus:outline-none"
-              />
-            </div>
-
-            {/* 가입 완료 버튼 */}
-            <Button
-              onClick={handleSignup}
-              className="h-24 w-138.25 rounded-[10px] border-[2.5px] border-black bg-rose-600 text-[30px] font-bold text-white hover:bg-rose-700 font-['Pretendard']"
-            >
-              가입 완료
-            </Button>
-
-            {/* 로그인 페이지로 돌아가는 안내 */}
-            <p className="text-center text-[18px] font-bold font-['Pretendard']">
-              <span className="text-zinc-400/75">이미 계정이 있으신가요?</span>
-              <span className="text-black"> </span>
-              <button
-                type="button"
-                onClick={() => navigate("/login")}
-                className="text-orange-200 hover:opacity-80"
-              >
-                로그인하기
-              </button>
-            </p>
-          </CardContent>
-        </Card>
-      </section>
-    </main>
+      <p className="mt-5 text-center text-[13px] text-ink-3">
+        이미 계정이 있으신가요?{" "}
+        <Link to="/login" className="font-semibold text-cobalt hover:underline">
+          로그인
+        </Link>
+      </p>
+    </AuthCard>
   );
-};
+}
