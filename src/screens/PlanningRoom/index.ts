@@ -1,1 +1,1 @@
-export {PlanningRoom} from './PlanningRoom';
+export { default } from "./PlanningRoom";
