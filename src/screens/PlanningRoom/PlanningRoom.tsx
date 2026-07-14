@@ -59,6 +59,7 @@ export default function PlanningRoom() {
             </div>
           </div>
         </section>
+      </div>
 
         {/* 소개 카드 4개 */}
         <IntroCards />
