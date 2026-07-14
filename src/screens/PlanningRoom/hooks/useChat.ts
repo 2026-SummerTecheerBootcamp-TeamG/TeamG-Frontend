@@ -21,14 +21,25 @@ const EMPTY_REQUEST: TripRequest = {
 const GREETING =
   "가는 날짜, 인원, 목적지, 예산을 한 문장으로 적어주세요.\n예: “후쿠오카, 9/12~9/14, 2명, 100만원”";
 
+interface Options {
+  /** 슬롯이 다 찼을 때 (계획 생성) */
+  onReady: (req: TripRequest) => void;
+  /** 계획이 이미 있을 때 들어온 수정 요청 */
+  onEdit: (
+    req: TripRequest,
+    text: string,
+  ) => { request: TripRequest; note: string };
+  /** 계획이 이미 그려져 있는지 */
+  hasPlan: boolean;
+}
+
 /** 챗 대화와 요청 슬롯을 관리한다 */
-export function useChat() {
+export function useChat({ onReady, onEdit, hasPlan }: Options) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: "greet", role: "bot", text: GREETING },
   ]);
   const [request, setRequest] = useState<TripRequest>(EMPTY_REQUEST);
   const [isTyping, setIsTyping] = useState(false);
-  /** 슬롯이 모두 채워졌는지 (계획 생성 단계로 넘어갈 조건) */
   const [isReady, setIsReady] = useState(false);
 
   const idRef = useRef(0);
@@ -44,10 +55,19 @@ export function useChat() {
 
       push({ role: "user", text });
       setIsTyping(true);
-
-      // TODO: POST /api/v1/agent/parse (또는 재질문이면 /parse/answer) 로 교체
       await new Promise((r) => setTimeout(r, 700));
 
+      // 계획이 이미 있으면 수정 요청으로 본다
+      if (hasPlan) {
+        const merged = mergeRequest(request, text);
+        const { request: edited, note } = onEdit(merged, text);
+        setRequest(edited);
+        push({ role: "bot", text: `${note} 계획서를 갱신했습니다.` });
+        setIsTyping(false);
+        return;
+      }
+
+      // TODO: POST /api/v1/agent/parse (재질문이면 /parse/answer) 로 교체
       const next = mergeRequest(request, text);
       setRequest(next);
 
@@ -68,11 +88,18 @@ export function useChat() {
           slots: chips,
         });
         setIsReady(true);
+        onReady(next);
       }
 
       setIsTyping(false);
     },
-    [isTyping, push, request],
+    [hasPlan, isTyping, onEdit, onReady, push, request],
+  );
+
+  /** 계획서 쪽에서 알려주는 안내 (확정 완료 등) */
+  const notify = useCallback(
+    (text: string) => push({ role: "bot", text }),
+    [push],
   );
 
   const reset = useCallback(() => {
@@ -83,5 +110,5 @@ export function useChat() {
     setIsTyping(false);
   }, []);
 
-  return { messages, request, isTyping, isReady, send, reset };
+  return { messages, request, isTyping, isReady, send, notify, reset };
 }
