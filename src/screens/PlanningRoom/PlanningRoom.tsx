@@ -1,15 +1,15 @@
+import IntroCards from "./components/IntroCards";
+
 /**
  * 메인 화면 (랜딩 + 챗 + 계획서)
- * 이슈 1에서는 레이아웃 뼈대만 잡는다.
- *  - 랜딩 문구   → 이슈 2
- *  - 왼쪽 챗 패널 → 이슈 4
+ *  - 왼쪽 챗 패널  → 이슈 4
  *  - 오른쪽 계획서 → 이슈 5
  */
 export default function PlanningRoom() {
   return (
     <div className="mx-auto max-w-[1240px] px-5 md:px-7">
-      {/* 랜딩 (이슈 2에서 채운다) */}
-      <section className="pt-10 pb-5 md:pt-14">
+      {/* 랜딩 */}
+      <section className="pb-5 pt-10 md:pt-14">
         <p className="mb-4 flex items-center gap-2.5 font-mono text-[11.5px] uppercase tracking-[0.14em] text-ink-3">
           한 문장 → 확정된 여행
           <span className="h-px w-[120px] bg-line" />
@@ -24,7 +24,7 @@ export default function PlanningRoom() {
       </section>
 
       {/* 워크벤치: 왼쪽 챗 + 오른쪽 계획서 (lg 미만에서 1단으로 스택) */}
-      <section className="grid grid-cols-1 items-start gap-5 pb-24 pt-3 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+      <section className="grid grid-cols-1 items-start gap-5 pb-20 pt-3 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         {/* 챗 패널 자리 (이슈 4) */}
         <div className="h-[620px] rounded-card border border-line bg-paper shadow-[0_1px_2px_rgba(15,20,24,.04),0_18px_40px_-28px_rgba(15,20,24,.3)] lg:sticky lg:top-[88px]">
           <div className="grid h-full place-items-center text-sm text-ink-3">
@@ -39,6 +39,9 @@ export default function PlanningRoom() {
           </div>
         </div>
       </section>
+
+      {/* 소개 카드 4개 */}
+      <IntroCards />
     </div>
   );
 }
