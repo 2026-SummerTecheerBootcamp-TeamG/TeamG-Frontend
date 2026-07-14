@@ -1,22 +1,31 @@
-import { Routes, Route } from "react-router-dom";
-import { Element } from "./screens/Element/Element.tsx";
-import { Login } from "./screens/login/login.tsx";
-import { Signup } from "./screens/signup/index.ts";
-import { PlanningRoom } from "./screens/PlanningRoom/index.ts";
-import { MyPage } from "./screens/MyPage/index.ts";
-import { PlanConfirm } from "./screens/PlanConfirm/index.ts";
+import { Route, Routes } from "react-router-dom";
+import AppLayout from "@/components/layout/AppLayout";
+import ProtectedRoute from "@/components/layout/ProtectedRoute";
+import { AuthProvider } from "@/context/AuthContext";
+import PlanningRoom from "@/screens/PlanningRoom";
 
-function App() {
+export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Element />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/planning-room" element={<PlanningRoom />} />
-      <Route path="/my-page" element={<MyPage />} />
-      <Route path="/plan-confirm" element={<PlanConfirm />} />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        <Route element={<AppLayout />}>
+          {/* 메인: 랜딩 + 챗 + 계획서  (이슈 2·4·5) */}
+          <Route path="/" element={<PlanningRoom />} />
+
+          {/* 로그인 / 회원가입  (이슈 3) */}
+          {/* <Route path="/login" element={<Login />} /> */}
+          {/* <Route path="/signup" element={<Signup />} /> */}
+
+          {/* 계획서 확정 화면  (이슈 5) */}
+          {/* <Route path="/plan/:tripId" element={<PlanConfirm />} /> */}
+
+          {/* 로그인해야 볼 수 있는 화면 */}
+          <Route element={<ProtectedRoute />}>
+            {/* 마이페이지  (이슈 7·8) */}
+            {/* <Route path="/mypage" element={<MyPage />} /> */}
+          </Route>
+        </Route>
+      </Routes>
+    </AuthProvider>
   );
 }
-
-export default App;
