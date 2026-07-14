@@ -1,13 +1,38 @@
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import ChatPanel from "./components/ChatPanel";
 import IntroCards from "./components/IntroCards";
+import PlanProgress from "./components/PlanProgress";
+import PlanSheet from "./components/PlanSheet";
 import { useChat } from "./hooks/useChat";
+import { usePlan } from "./hooks/usePlan";
+import { formatWon } from "./lib/parseRequest";
 
-/**
- * 메인 화면 (랜딩 + 챗 + 계획서)
- *  - 오른쪽 계획서 → 이슈 5
- */
 export default function PlanningRoom() {
-  const { messages, isTyping, isReady, send, reset } = useChat();
+  const { user, isLoggedIn } = useAuth();
+  const navigate = useNavigate();
+
+  const { plan, status, step, version, start, edit, confirm } = usePlan();
+
+  const chat = useChat({
+    hasPlan: status === "ready" || status === "confirmed",
+    onReady: start,
+    onEdit: edit,
+  });
+
+  /** 확정: 로그인 안 했으면 로그인 화면으로 보낸다 */
+  const handleConfirm = () => {
+    if (!isLoggedIn) {
+      navigate("/login", { state: { from: "/" } });
+      return;
+    }
+    confirm();
+    if (plan) {
+      chat.notify(
+        `계획을 확정했습니다. ${plan.city} ${plan.nights}박 ${plan.nights + 1}일, 총 ${formatWon(plan.allocation.total)}원.\n마이페이지에서 다시 볼 수 있어요.`,
+      );
+    }
+  };
 
   return (
     <div>
@@ -38,30 +63,48 @@ export default function PlanningRoom() {
         </div>
       </section>
 
-      {/* 나머지 컨텐츠 */}
       <div className="mx-auto max-w-[1240px] px-5 md:px-7">
         {/* 워크벤치: 왼쪽 챗 + 오른쪽 계획서 */}
         <section className="grid grid-cols-1 items-start gap-5 pb-20 pt-3 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
           <ChatPanel
-            messages={messages}
-            isTyping={isTyping}
-            hideExamples={isReady}
-            onSend={send}
-            onReset={reset}
+            messages={chat.messages}
+            isTyping={chat.isTyping}
+            hideExamples={chat.isReady}
+            onSend={chat.send}
+            onReset={chat.reset}
           />
 
-          {/* 계획서 캔버스 자리 (이슈 5) */}
-          <div className="min-h-[620px] rounded-card border border-line bg-paper shadow-[0_1px_2px_rgba(15,20,24,.04),0_18px_40px_-28px_rgba(15,20,24,.3)]">
-            <div className="grid h-[620px] place-items-center px-6 text-center text-sm text-ink-3">
-              {isReady
-                ? "요청을 다 받았습니다. 계획서는 이슈 5에서 그립니다."
-                : "여기에 계획이 그려집니다 (이슈 5)"}
-            </div>
+          <div className="min-h-[620px] overflow-hidden rounded-card border border-line bg-paper shadow-[0_1px_2px_rgba(15,20,24,.04),0_18px_40px_-28px_rgba(15,20,24,.3)]">
+            {status === "idle" && (
+              <div className="grid h-[620px] place-items-center px-8 text-center">
+                <div className="max-w-[330px]">
+                  <span className="mx-auto mb-5 block h-[110px] w-px bg-[repeating-linear-gradient(180deg,var(--color-line)_0_5px,transparent_5px_11px)]" />
+                  <h3 className="mb-2 text-[17px] font-bold tracking-[-0.03em]">
+                    여기에 계획이 그려집니다
+                  </h3>
+                  <p className="break-keep text-sm text-ink-3">
+                    왼쪽에 문장을 적으면 항공편, 숙소, 날짜별 동선과 예산 정산이
+                    한 장으로 채워집니다.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {status === "building" && <PlanProgress current={step} />}
+
+            {(status === "ready" || status === "confirmed") && plan && (
+              <PlanSheet
+                plan={plan}
+                budget={chat.request.budget ?? plan.allocation.total}
+                version={version}
+                status={status}
+                departureIata={user?.defaultDeparture.iata ?? "ICN"}
+                onConfirm={handleConfirm}
+              />
+            )}
           </div>
         </section>
-      </div>
 
-        {/* 소개 카드 4개 */}
         <IntroCards />
       </div>
   );
