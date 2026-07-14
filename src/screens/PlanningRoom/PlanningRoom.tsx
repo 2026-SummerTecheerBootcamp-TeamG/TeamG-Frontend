@@ -1,8 +1,8 @@
+import IntroCards from "./components/IntroCards";
+
 /**
  * 메인 화면 (랜딩 + 챗 + 계획서)
- * 이슈 1에서는 레이아웃 뼈대만 잡는다.
- *  - 랜딩 문구   → 이슈 2
- *  - 왼쪽 챗 패널 → 이슈 4
+ *  - 왼쪽 챗 패널  → 이슈 4
  *  - 오른쪽 계획서 → 이슈 5
  */
 export default function PlanningRoom() {
@@ -51,6 +51,11 @@ export default function PlanningRoom() {
           </div>
         </section>
       </div>
+        </div>
+      </section>
+
+      {/* 소개 카드 4개 */}
+      <IntroCards />
     </div>
   );
 }
