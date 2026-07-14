@@ -1,10 +1,65 @@
 @import "tailwindcss";
 
-/* 전역 스타일 설정 */
-html, body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  overflow-x: hidden; /* 가로 스크롤바 강제 제거 */
+/* ─────────────────────────────────────────────
+   디자인 토큰
+   Tailwind v4는 @theme 안에 정의하면
+   --color-ink → bg-ink / text-ink / border-ink 로 바로 쓸 수 있다.
+   색을 바꾸고 싶으면 여기 한 줄만 고치면 전체에 반영된다.
+   ───────────────────────────────────────────── */
+@theme {
+  /* 글자 */
+  --color-ink: #0f1418;
+  --color-ink-2: #57626c;
+  --color-ink-3: #8b959e;
+
+  /* 선 / 배경 */
+  --color-line: #e3e7eb;
+  --color-line-soft: #eef1f4;
+  --color-paper: #ffffff;
+  --color-canvas: #edf0f3;
+
+  /* 포인트 */
+  --color-cobalt: #2743e0;
+  --color-cobalt-soft: #eaedfd;
+  --color-teal: #0e9a82; /* 숙소 */
+  --color-amber: #e29327; /* 일정 */
+  --color-violet: #7a5af0; /* 동선 */
+  --color-stamp: #d8402f; /* 확정 도장 / 경고 */
+
+  /* 폰트 */
+  --font-sans: "Pretendard", ui-sans-serif, system-ui, "Apple SD Gothic Neo",
+    sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, "Roboto Mono", monospace;
+
+  /* 라운드 */
+  --radius-card: 18px;
+  --radius-field: 13px;
+}
+
+/* ─── 베이스 ─── */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    line-height: 1.55;
+    letter-spacing: -0.01em;
+  }
+  ::selection {
+    @apply bg-cobalt text-white;
+  }
+  :focus-visible {
+    @apply outline-2 outline-cobalt outline-offset-2 rounded-md;
+  }
+}
+
+/* 모션 최소화 설정 존중 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
