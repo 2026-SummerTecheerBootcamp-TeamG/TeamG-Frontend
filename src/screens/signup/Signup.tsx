@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   AuthCard,
@@ -7,16 +7,7 @@ import {
   SubmitButton,
 } from "@/components/auth/AuthForm";
 import { useAuth } from "@/context/AuthContext";
-
-/** 기본 출발지 선택지 */
-const DEPARTURES = [
-  { city: "서울", iata: "ICN" },
-  { city: "부산", iata: "PUS" },
-  { city: "제주", iata: "CJU" },
-  { city: "대구", iata: "TAE" },
-];
-
-const NATIONS = ["대한민국", "일본", "미국", "대만", "베트남"];
+import { COUNTRIES, findCountry } from "@/screens/signup/countries";
 
 export default function Signup() {
   const { login } = useAuth();
@@ -27,13 +18,30 @@ export default function Signup() {
     password: "",
     passwordConfirm: "",
     nickname: "",
-    nationality: "대한민국",
+    nationalityCode: "KR", // 국적은 국가 코드로 관리 (표시명/공항 조회에 사용)
     departure: "서울|ICN",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // 선택된 국적의 공항 목록 (국적이 바뀌면 자동으로 다시 계산됨)
+  const availableAirports = useMemo(
+    () => findCountry(form.nationalityCode)?.airports ?? [],
+    [form.nationalityCode]
+  );
+
   const set = (key: string, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const handleNationalityChange = (code: string) => {
+    const country = findCountry(code);
+    const firstAirport = country?.airports[0];
+    setForm((prev) => ({
+      ...prev,
+      nationalityCode: code,
+      // 국적이 바뀌면 그 나라의 첫 번째 공항으로 출발지를 자동 갱신
+      departure: firstAirport ? `${firstAirport.city}|${firstAirport.iata}` : "",
+    }));
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -45,18 +53,20 @@ export default function Signup() {
     if (form.password !== form.passwordConfirm)
       next.passwordConfirm = "비밀번호가 일치하지 않습니다.";
     if (!form.nickname.trim()) next.nickname = "닉네임을 입력해주세요.";
+    if (!form.departure) next.departure = "출발 가능한 공항이 없는 국가입니다.";
 
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
     const [city, iata] = form.departure.split("|");
+    const nationalityName = findCountry(form.nationalityCode)?.name ?? "";
 
     // TODO: POST /api/v1/auth/signup → POST /api/v1/auth/login 연동 후 교체
     login({
       userId: 1,
       nickname: form.nickname,
       email: form.email,
-      nationality: form.nationality,
+      nationality: nationalityName,
       defaultDeparture: { city, iata },
     });
 
@@ -101,25 +111,31 @@ export default function Signup() {
         />
         <SelectField
           label="국적"
-          value={form.nationality}
-          onChange={(e) => set("nationality", e.target.value)}
+          value={form.nationalityCode}
+          onChange={(e) => handleNationalityChange(e.target.value)}
         >
-          {NATIONS.map((n) => (
-            <option key={n} value={n}>
-              {n}
+          {COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.name}
             </option>
           ))}
         </SelectField>
         <SelectField
           label="기본 출발지"
           value={form.departure}
+          //error={errors.departure}
+          disabled={availableAirports.length === 0}
           onChange={(e) => set("departure", e.target.value)}
         >
-          {DEPARTURES.map((d) => (
-            <option key={d.iata} value={`${d.city}|${d.iata}`}>
-              {d.city} ({d.iata})
-            </option>
-          ))}
+          {availableAirports.length === 0 ? (
+            <option value="">선택 가능한 공항 없음</option>
+          ) : (
+            availableAirports.map((a) => (
+              <option key={a.iata} value={`${a.city}|${a.iata}`}>
+                {a.city} ({a.iata})
+              </option>
+            ))
+          )}
         </SelectField>
 
         <SubmitButton>가입하기</SubmitButton>
