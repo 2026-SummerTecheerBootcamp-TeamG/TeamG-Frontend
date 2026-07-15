@@ -211,7 +211,10 @@ export default function RouteMap({ days, hotel }: Props) {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
+        <p
+          className="text-[10.5px] uppercase tracking-[0.12em] text-ink-3"
+          style={{ fontFamily: "Pretendard, sans-serif" }}
+        >
           동선 지도 {hotelPos ? "· 숙소에서 출발해 다시 숙소로" : "· 방문 순서대로"}
         </p>
 
@@ -220,7 +223,8 @@ export default function RouteMap({ days, hotel }: Props) {
             <button
               key={d ?? "all"}
               onClick={() => setActiveDay(d)}
-              className={`rounded-lg border px-2 py-1 font-mono text-[11px] font-semibold transition-colors ${
+              style={{ fontFamily: "Pretendard, sans-serif" }}
+              className={`rounded-lg border px-2 py-1 text-[11px] font-semibold transition-colors ${
                 activeDay === d
                   ? "border-ink bg-ink text-white"
                   : "border-line bg-white text-ink-2 hover:border-ink-3"

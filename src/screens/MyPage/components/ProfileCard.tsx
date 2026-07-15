@@ -33,7 +33,10 @@ export default function ProfileCard() {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 border-t border-line-soft py-[11px]">
-      <span className="w-[88px] shrink-0 font-mono text-[11px] tracking-[0.06em] text-ink-3">
+      <span
+        className="w-[88px] shrink-0 text-[11px] tracking-[0.06em] text-ink-3"
+        style={{ fontFamily: "Pretendard, sans-serif" }}
+      >
         {label}
       </span>
       <span className="flex-1 text-[14px] font-semibold tracking-[-0.015em]">

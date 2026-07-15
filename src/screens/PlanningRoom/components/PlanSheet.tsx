@@ -85,7 +85,10 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
     <div className="relative">
       {/* 확정 도장 (읽기 전용에서는 숨김) */}
       {confirmed && !readOnly && (
-        <div className="absolute right-6 top-5 z-10 -rotate-[9deg] rounded-[10px] border-[2.5px] border-stamp px-3 py-2 text-center font-mono text-stamp opacity-90">
+        <div
+          className="absolute right-6 top-5 z-10 -rotate-[9deg] rounded-[10px] border-[2.5px] border-stamp px-3 py-2 text-center text-stamp opacity-90"
+          style={{ fontFamily: "Pretendard, sans-serif" }}
+        >
           <p className="text-[17px] font-extrabold tracking-[0.14em]">확정</p>
           <p className="mt-0.5 text-[9px] tracking-[0.08em]">
             {new Date().toLocaleDateString("ko-KR")}
@@ -96,7 +99,10 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
       {/* 헤더 */}
       <div className="flex items-start justify-between gap-4 border-b border-line px-7 pb-5 pt-6">
         <div>
-          <p className="mb-2 flex items-center gap-1.5 font-mono text-[10.5px] font-bold uppercase tracking-[0.1em] text-teal">
+          <p
+            className="mb-2 flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.1em] text-teal"
+            style={{ fontFamily: "Pretendard, sans-serif" }}
+          >
             <span className="h-1.5 w-1.5 rounded-full bg-teal" />
             계획 완성
           </p>
@@ -109,7 +115,10 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
           )}
 
         </div>
-        <span className="shrink-0 rounded-md border border-line px-1.5 py-0.5 font-mono text-[10.5px] text-ink-3">
+        <span
+          className="shrink-0 rounded-md border border-line px-1.5 py-0.5 text-[10.5px] text-ink-3"
+          style={{ fontFamily: "Pretendard, sans-serif" }}
+        >
           v{version}
         </span>
       </div>
@@ -332,7 +341,10 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
         {days.map((day, i) => (
           <div key={i} className="border-t border-line-soft pt-5">
             <div className="mb-3.5 flex items-baseline gap-2.5">
-              <span className="rounded-md bg-ink px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-[0.06em] text-white">
+              <span
+                className="rounded-md bg-ink px-1.5 py-0.5 text-[11px] font-bold tracking-[0.06em] text-white"
+                style={{ fontFamily: "Pretendard, sans-serif" }}
+              >
                 DAY {i + 1}
               </span>
 

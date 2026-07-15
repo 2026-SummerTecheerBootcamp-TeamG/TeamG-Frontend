@@ -17,7 +17,9 @@ export default function AppLayout() {
           <span className="text-[15px] font-bold tracking-[-0.03em]">
             트립캔버스
           </span>
-          <span className="font-mono text-[11px] text-ink-3">TRIPCANVAS</span>
+          <span className="text-[11px] text-ink-3" style={{ fontFamily: "Pretendard, sans-serif" }}>
+            TRIPCANVAS
+          </span>
         </div>
       </footer>
     </div>
