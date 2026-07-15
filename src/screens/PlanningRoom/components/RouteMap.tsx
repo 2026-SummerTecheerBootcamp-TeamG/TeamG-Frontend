@@ -2,15 +2,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { PlanDay } from "@/types/trip";
 import { loadGoogleMaps } from "@/lib/googleMaps";
 
-/** DAY별 색 (일정 타임라인과 맞춘다) */
+/** DAY별 색 (일정 타임라인과 맞춘다) — 선명하게 */
 const DAY_COLORS = [
-  "#2743E0",
-  "#0E9A82",
-  "#E29327",
-  "#7A5AF0",
-  "#D8402F",
-  "#1F8FD8",
+  "#3B82F6",
+  "#10B981",
+  "#F59E0B",
+  "#8B5CF6",
+  "#EF4444",
+  "#06B6D4",
 ];
+
+/** 핀 모양 마커 경로 (끝 0,0이 실제 위치, 원형 머리 중심은 0,-18) */
+const PIN_PATH =
+  "M 0,0 C -2,-2 -10,-10 -10,-18 A 10,10 0 1 1 10,-18 C 10,-10 2,-2 0,0 Z";
+const PIN_LABEL_ORIGIN_Y = -18;
 
 interface HotelPin {
   name: string;
@@ -20,14 +25,41 @@ interface HotelPin {
 
 interface Props {
   days: PlanDay[];
-  /** 좌표가 있으면 숙소를 기준점으로 삼아 숙소→방문지→숙소 동선을 그린다 */
+  /** 좌표가 있으면 지도 위에 숙소 위치를 별도 마커로 표시한다 (동선에는 포함하지 않음) */
   hotel?: HotelPin | null;
 }
 
-/** 숙소 좌표가 있으면 그 지점을 기준으로, 없으면 방문지 순서만으로 동선을 그린다 */
+/** 두 지점 이상을 실제 도보 경로로 잇는다. 경로를 찾지 못하면 직선을 그대로 반환한다 */
+function fetchRoutePath(
+  service: google.maps.DirectionsService,
+  points: google.maps.LatLngLiteral[],
+): Promise<google.maps.LatLngLiteral[]> {
+  if (points.length < 2) return Promise.resolve(points);
+
+  const origin = points[0];
+  const destination = points[points.length - 1];
+  const waypoints = points.slice(1, -1).map((location) => ({ location, stopover: true }));
+
+  return new Promise((resolve) => {
+    service.route(
+      { origin, destination, waypoints, travelMode: google.maps.TravelMode.WALKING },
+      (result, status) => {
+        const overview = result?.routes[0]?.overview_path;
+        if (status === google.maps.DirectionsStatus.OK && overview && overview.length > 0) {
+          resolve(overview.map((p) => ({ lat: p.lat(), lng: p.lng() })));
+        } else {
+          resolve(points);
+        }
+      },
+    );
+  });
+}
+
+/** 숙소는 별도 지점으로 표시하고, 방문지끼리는 실제 도보 경로를 따라 잇는다 */
 export default function RouteMap({ days, hotel }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   /** 지도에 올린 마커·선을 지우려고 들고 있는다 */
   const drawnRef = useRef<(google.maps.Marker | google.maps.Polyline)[]>([]);
   const infoRef = useRef<google.maps.InfoWindow | null>(null);
@@ -70,6 +102,7 @@ export default function RouteMap({ days, hotel }: Props) {
           clickableIcons: false,
         });
         infoRef.current = new google.maps.InfoWindow();
+        directionsServiceRef.current = new google.maps.DirectionsService();
         setIsLoading(false);
       })
       .catch((e: Error) => {
@@ -88,124 +121,126 @@ export default function RouteMap({ days, hotel }: Props) {
   // 마커·경로 그리기 (날짜 필터가 바뀔 때마다 다시 그린다)
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    const directionsService = directionsServiceRef.current;
+    if (!map || !directionsService) return;
 
-    // 이전에 그린 것 지우기
-    drawnRef.current.forEach((item) => item.setMap(null));
-    drawnRef.current = [];
+    let cancelled = false;
 
-    const bounds = new google.maps.LatLngBounds();
+    const draw = async () => {
+      // 이전에 그린 것 지우기
+      drawnRef.current.forEach((item) => item.setMap(null));
+      drawnRef.current = [];
 
-    // 숙소 마커 (좌표가 있을 때만)
-    if (hotelPos) {
-      bounds.extend(hotelPos);
-      const hotelMarker = new google.maps.Marker({
-        position: hotelPos,
-        map,
-        title: hotel?.name,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: "#0F1418",
-          fillOpacity: 1,
-          strokeColor: "#FFFFFF",
-          strokeWeight: 2,
-        },
-        zIndex: 100,
-      });
-      hotelMarker.addListener("click", () => {
-        infoRef.current?.setContent(
-          `<div style="font-family:Pretendard,sans-serif;padding:2px 4px">
-            <strong style="font-size:13px">${hotel?.name ?? "숙소"}</strong>
-            <p style="margin:4px 0 0;font-size:12px;color:#57626C">숙소</p>
-          </div>`,
-        );
-        infoRef.current?.open(map, hotelMarker);
-      });
-      drawnRef.current.push(hotelMarker);
-    }
+      const bounds = new google.maps.LatLngBounds();
 
-    // 보여줄 날짜만 고른다
-    const targetDays = days
-      .map((day, index) => ({ day, index }))
-      .filter(({ index }) => activeDay === null || index === activeDay);
-
-    targetDays.forEach(({ day, index }) => {
-      const color = DAY_COLORS[index % DAY_COLORS.length];
-      const points = day.items.filter((item) => item.latitude != null && item.longitude != null);
-      const path: google.maps.LatLngLiteral[] = hotelPos ? [hotelPos] : [];
-
-      points.forEach((item, i) => {
-        const pos = { lat: item.latitude!, lng: item.longitude! };
-        path.push(pos);
-        bounds.extend(pos);
-
-        const marker = new google.maps.Marker({
-          position: pos,
+      // 숙소 마커 (좌표가 있을 때만) — 동선에는 포함하지 않고 위치만 표시
+      if (hotelPos) {
+        bounds.extend(hotelPos);
+        const hotelMarker = new google.maps.Marker({
+          position: hotelPos,
           map,
-          label: {
-            text: String(i + 1),
-            color,
-            fontSize: "11px",
-            fontWeight: "700",
-          },
+          title: hotel?.name,
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: "#FFFFFF",
+            scale: 8,
+            fillColor: "#0F1418",
             fillOpacity: 1,
-            strokeColor: color,
+            strokeColor: "#FFFFFF",
             strokeWeight: 2,
           },
+          zIndex: 100,
         });
-
-        marker.addListener("click", () => {
-          const transit =
-            item.travel_min_to_next != null
-              ? `다음 장소까지 ${item.travel_min_to_next}분`
-              : "";
+        hotelMarker.addListener("click", () => {
           infoRef.current?.setContent(
             `<div style="font-family:Pretendard,sans-serif;padding:2px 4px">
-              <strong style="font-size:13px">${item.place_name}</strong>
-              <p style="margin:4px 0 0;font-size:12px;color:#57626C">
-                DAY ${index + 1} · 방문 순서 ${item.visit_order}${transit ? ` · ${transit}` : ""}
-              </p>
+              <strong style="font-size:13px">${hotel?.name ?? "숙소"}</strong>
+              <p style="margin:4px 0 0;font-size:12px;color:#57626C">숙소</p>
             </div>`,
           );
-          infoRef.current?.open(map, marker);
+          infoRef.current?.open(map, hotelMarker);
+        });
+        drawnRef.current.push(hotelMarker);
+      }
+
+      // 보여줄 날짜만 고른다
+      const targetDays = days
+        .map((day, index) => ({ day, index }))
+        .filter(({ index }) => activeDay === null || index === activeDay);
+
+      for (const { day, index } of targetDays) {
+        const color = DAY_COLORS[index % DAY_COLORS.length];
+        const points = day.items.filter((item) => item.latitude != null && item.longitude != null);
+
+        points.forEach((item, i) => {
+          const pos = { lat: item.latitude!, lng: item.longitude! };
+          bounds.extend(pos);
+
+          const marker = new google.maps.Marker({
+            position: pos,
+            map,
+            zIndex: 50,
+            label: {
+              text: String(i + 1),
+              color: "#FFFFFF",
+              fontSize: "12px",
+              fontWeight: "700",
+            },
+            icon: {
+              path: PIN_PATH,
+              scale: 1.7,
+              anchor: new google.maps.Point(0, 0),
+              labelOrigin: new google.maps.Point(0, PIN_LABEL_ORIGIN_Y),
+              fillColor: color,
+              fillOpacity: 1,
+              strokeColor: "#FFFFFF",
+              strokeWeight: 2,
+            },
+          });
+
+          marker.addListener("click", () => {
+            const transit =
+              item.travel_min_to_next != null
+                ? `다음 장소까지 ${item.travel_min_to_next}분`
+                : "";
+            infoRef.current?.setContent(
+              `<div style="font-family:Pretendard,sans-serif;padding:2px 4px">
+                <strong style="font-size:13px">${item.place_name}</strong>
+                <p style="margin:4px 0 0;font-size:12px;color:#57626C">
+                  DAY ${index + 1} · 방문 순서 ${item.visit_order}${transit ? ` · ${transit}` : ""}
+                </p>
+              </div>`,
+            );
+            infoRef.current?.open(map, marker);
+          });
+
+          drawnRef.current.push(marker);
         });
 
-        drawnRef.current.push(marker);
-      });
+        if (points.length < 2) continue;
 
-      // 숙소 기준일 때만 다시 숙소로 돌아온다
-      if (hotelPos) path.push(hotelPos);
+        // 방문지끼리만 실제 도보 경로로 잇는다 (숙소는 별도 지점)
+        const straight = points.map((item) => ({ lat: item.latitude!, lng: item.longitude! }));
+        const routedPath = await fetchRoutePath(directionsService, straight);
+        if (cancelled) return;
 
-      if (path.length < 2) return;
+        const line = new google.maps.Polyline({
+          path: routedPath,
+          map,
+          strokeColor: color,
+          strokeOpacity: activeDay === null ? 0.85 : 1,
+          strokeWeight: 5,
+        });
+        drawnRef.current.push(line);
+      }
 
-      const line = new google.maps.Polyline({
-        path,
-        map,
-        strokeColor: color,
-        strokeOpacity: 0,
-        // 점선
-        icons: [
-          {
-            icon: {
-              path: "M 0,-1 0,1",
-              strokeOpacity: activeDay === null ? 0.75 : 1,
-              strokeWeight: 2,
-              scale: 2,
-            },
-            offset: "0",
-            repeat: "10px",
-          },
-        ],
-      });
-      drawnRef.current.push(line);
-    });
+      if (!cancelled && !bounds.isEmpty()) map.fitBounds(bounds, 48);
+    };
 
-    if (!bounds.isEmpty()) map.fitBounds(bounds, 48);
+    draw();
+
+    return () => {
+      cancelled = true;
+    };
   }, [days, activeDay, isLoading, hotelPos, hotel?.name]);
 
   return (
@@ -215,7 +250,7 @@ export default function RouteMap({ days, hotel }: Props) {
           className="text-[10.5px] uppercase tracking-[0.12em] text-ink-3"
           style={{ fontFamily: "Pretendard, sans-serif" }}
         >
-          동선 지도 {hotelPos ? "· 숙소에서 출발해 다시 숙소로" : "· 방문 순서대로"}
+          동선 지도 · 실제 이동 경로 기준
         </p>
 
         <div className="ml-auto flex flex-wrap gap-1.5">
