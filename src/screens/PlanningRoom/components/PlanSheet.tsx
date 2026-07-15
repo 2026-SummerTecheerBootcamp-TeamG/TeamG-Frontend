@@ -8,6 +8,8 @@ interface Props {
   version: number;
   status: PlanStatus;
   onConfirm: () => void;
+  /** 읽기 전용 (마이페이지 상세): 확정 버튼·도장을 숨긴다 */
+  readOnly?: boolean;
 }
 
 const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
@@ -17,8 +19,9 @@ const formatDay = (iso: string) => {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAY[d.getDay()]})`;
 };
 
-export default function PlanSheet({ plan, request, version, status, onConfirm }: Props) {
+export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
   const { allocation: al, flight, hotel, days } = plan;
+
   const confirmed = status === "confirmed";
 
   const cities = days.length > 0
@@ -38,10 +41,10 @@ export default function PlanSheet({ plan, request, version, status, onConfirm }:
     Math.max(2, Math.round((value / Math.max(denom, 1)) * 100));
 
   return (
-    <div className="relative" style={{ fontFamily: "Pretendard, sans-serif" }}>
-      {/* 확정 도장 */}
-      {confirmed && (
-        <div className="absolute right-6 top-5 z-10 -rotate-[9deg] rounded-[10px] border-[2.5px] border-stamp px-3 py-2 text-center text-stamp opacity-90">
+    <div className="relative">
+      {/* 확정 도장 (읽기 전용에서는 숨김) */}
+      {confirmed && !readOnly && (
+        <div className="absolute right-6 top-5 z-10 -rotate-[9deg] rounded-[10px] border-[2.5px] border-stamp px-3 py-2 text-center font-mono text-stamp opacity-90">
           <p className="text-[17px] font-extrabold tracking-[0.14em]">확정</p>
           <p className="mt-0.5 text-[9px] tracking-[0.08em]">
             {new Date().toLocaleDateString("ko-KR")}
@@ -52,18 +55,20 @@ export default function PlanSheet({ plan, request, version, status, onConfirm }:
       {/* 헤더 */}
       <div className="flex items-start justify-between gap-4 border-b border-line px-7 pb-5 pt-6">
         <div>
-          <p className="mb-2 flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.1em] text-teal">
+          <p className="mb-2 flex items-center gap-1.5 font-mono text-[10.5px] font-bold uppercase tracking-[0.1em] text-teal">
             <span className="h-1.5 w-1.5 rounded-full bg-teal" />
             계획 완성
           </p>
           <h2 className="text-[26px] font-extrabold leading-tight tracking-[-0.04em]">
             {cities || "여행"} {nights > 0 && `${nights}박 ${nights + 1}일`}
           </h2>
+
           {pax !== null && (
             <p className="mt-1.5 text-xs text-ink-2">인원 {pax}명</p>
           )}
+
         </div>
-        <span className="shrink-0 rounded-md border border-line px-1.5 py-0.5 text-[10.5px] text-ink-3">
+        <span className="shrink-0 rounded-md border border-line px-1.5 py-0.5 font-mono text-[10.5px] text-ink-3">
           v{version}
         </span>
       </div>
@@ -77,6 +82,7 @@ export default function PlanSheet({ plan, request, version, status, onConfirm }:
 
       {/* 예산 정산 */}
       <div className="border-b border-line bg-[#fcfdfd] px-7 py-5">
+
         {al === null && (
           <p className="text-[13px] text-ink-3">예산 정산 정보가 없습니다.</p>
         )}
@@ -163,6 +169,7 @@ export default function PlanSheet({ plan, request, version, status, onConfirm }:
             </div>
             <div className="min-w-[92px] whitespace-nowrap text-right text-sm font-bold">
               {formatWon(budgetAl ? budgetAl.breakdown.flight_krw : flight.price_krw)}원
+
             </div>
           </div>
           {flight.booking_url && (
@@ -179,6 +186,7 @@ export default function PlanSheet({ plan, request, version, status, onConfirm }:
       )}
 
       {/* 숙소 */}
+
       {hotel && (
         <div className="border-b border-line px-7 py-5">
           <p className="mb-3 text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
@@ -228,19 +236,23 @@ export default function PlanSheet({ plan, request, version, status, onConfirm }:
 
       {/* 일정 */}
       <div className="px-7 pb-6 pt-5">
+
         <p className="mb-1 text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
           일정
+
         </p>
 
         {days.map((day, i) => (
           <div key={i} className="border-t border-line-soft pt-5">
             <div className="mb-3.5 flex items-baseline gap-2.5">
-              <span className="rounded-md bg-ink px-1.5 py-0.5 text-[11px] font-bold tracking-[0.06em] text-white">
+              <span className="rounded-md bg-ink px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-[0.06em] text-white">
                 DAY {i + 1}
               </span>
+
               <span className="text-xs text-ink-3">{formatDay(day.date)}</span>
               {day.city_name && (
                 <span className="ml-auto text-[13px] text-ink-2">{day.city_name}</span>
+
               )}
             </div>
 
@@ -276,6 +288,7 @@ export default function PlanSheet({ plan, request, version, status, onConfirm }:
                       {item.travel_min_to_next}분
                     </span>
                   )}
+
                 </div>
               ))}
             </div>
@@ -283,7 +296,8 @@ export default function PlanSheet({ plan, request, version, status, onConfirm }:
         ))}
       </div>
 
-      {/* 확정 */}
+      {/* 확정 (읽기 전용이면 숨김) */}
+      {!readOnly && (
       <div className="sticky bottom-0 flex items-center gap-3 border-t border-line bg-white/90 px-7 py-3.5 backdrop-blur">
         <p className="text-[12.5px] text-ink-3">
           {confirmed
@@ -302,6 +316,7 @@ export default function PlanSheet({ plan, request, version, status, onConfirm }:
           {confirmed ? "확정됨" : "이 계획으로 확정"}
         </button>
       </div>
+      )}
     </div>
   );
 }

@@ -54,3 +54,14 @@ export interface Profile {
  
 export const fetchProfile = () =>
   api.get<Profile>("/users/me/profile").then((res) => res.data);
+
+/** PATCH /api/v1/users/me/profile 요청 바디 (수정 가능한 필드만) */
+export interface ProfileUpdatePayload {
+  nickname?: string;
+  nationality?: string; // ISO 3166-1 alpha-2, 예: "KR"
+  default_departure?: Departure;
+}
+
+/** 프로필 수정 — 성공 시 갱신된 Profile을 반환 */
+export const updateProfileRequest = (payload: ProfileUpdatePayload) =>
+  api.patch<Profile>("/users/me/profile", payload).then((res) => res.data);

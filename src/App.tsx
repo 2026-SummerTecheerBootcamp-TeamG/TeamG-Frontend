@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import PlanningRoom from "@/screens/PlanningRoom";
 import Login from "@/screens/login";
 import Signup from "@/screens/signup";
+import MyPage from "@/screens/MyPage";
 
 export default function App() {
   return (
@@ -24,7 +25,7 @@ export default function App() {
           {/* 로그인해야 볼 수 있는 화면 */}
           <Route element={<ProtectedRoute />}>
             {/* 마이페이지  (이슈 7·8) */}
-            {/* <Route path="/mypage" element={<MyPage />} /> */}
+            <Route path="/mypage" element={<MyPage />} />
           </Route>
         </Route>
       </Routes>
