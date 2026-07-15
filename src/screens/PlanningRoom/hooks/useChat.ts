@@ -1,21 +1,11 @@
-import axios from "axios";
 import { useCallback, useRef, useState } from "react";
 import type { ChatMessage, ParsedFields } from "@/types/trip";
 import { parseAnswer, parseMessage } from "@/api/trips";
+import { getApiErrorMessage } from "@/lib/api";
 import { fieldsToChips, summarizeFields } from "../lib/parseRequest";
 
 const GREETING =
   "가는 날짜, 인원, 목적지, 예산을 한 문장으로 적어주세요.\n예: “후쿠오카, 9/12~9/14, 2명, 100만원”";
-
-function getErrorMessage(e: unknown): string {
-  if (axios.isAxiosError(e)) {
-    const data: unknown = e.response?.data;
-    if (data && typeof data === "object" && "error" in data && typeof (data as { error?: unknown }).error === "string") {
-      return (data as { error: string }).error;
-    }
-  }
-  return "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
-}
 
 interface Options {
   /** 슬롯이 다 찼을 때 (계획 생성) - 확정된 parse_id와 필드를 넘긴다 */
@@ -79,7 +69,7 @@ export function useChat({ onReady, onEdit, hasPlan }: Options) {
         setIsReady(true);
         onReady(result.parse_id, result.fields);
       } catch (e) {
-        push({ role: "bot", text: getErrorMessage(e) });
+        push({ role: "bot", text: getApiErrorMessage(e) });
       } finally {
         setIsTyping(false);
       }

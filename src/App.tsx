@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
+import PaymentResult from "@/screens/PaymentResult";
 import PlanningRoom from "@/screens/PlanningRoom";
 import Login from "@/screens/login";
 import Signup from "@/screens/signup";
@@ -26,6 +27,9 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             {/* 마이페이지  (이슈 7·8) */}
             <Route path="/mypage" element={<MyPage />} />
+
+            {/* 토스 결제창 successUrl/failUrl 복귀 지점 */}
+            <Route path="/payment/result" element={<PaymentResult />} />
           </Route>
         </Route>
       </Routes>

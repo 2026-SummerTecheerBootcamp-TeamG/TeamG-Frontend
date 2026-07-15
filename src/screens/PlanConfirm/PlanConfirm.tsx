@@ -2,7 +2,6 @@ import type { JSX } from "react/jsx-runtime";
 import { useEffect, useState } from "react";
 import {
   Plane,
-  MapPin,
   UtensilsCrossed,
   Waves,
   BedDouble,
@@ -90,13 +89,6 @@ const categoryStyles: Record<CategoryType, CategoryStyle> = {
   여가: { dot: "bg-amber-300", icon: <Waves className="h-5 w-5 text-black" /> },
   숙소: { dot: "bg-red-300", icon: <BedDouble className="h-5 w-5 text-black" /> },
 };
-
-const dayPins = [
-  { label: "후쿠오카 국제공항", left: 291, top: 650.5 },
-  { label: "라멘 신신", left: 415, top: 523.5 },
-  { label: "후쿠오카 온천", left: 577.5, top: 470 },
-  { label: "숙소", left: 826.5, top: 419 },
-];
 
 function useResponsiveScale() {
   const [scale, setScale] = useState(1);
