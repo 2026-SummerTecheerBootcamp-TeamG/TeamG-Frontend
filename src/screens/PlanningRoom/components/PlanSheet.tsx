@@ -31,7 +31,7 @@ export default function PlanSheet({
     Math.max(2, Math.round((value / Math.max(al.total, budget)) * 100));
 
   return (
-    <div className="relative">
+    <div className="relative" style={{ fontFamily: "Pretendard, sans-serif" }}>
       {/* 확정 도장 */}
       {confirmed && (
         <div className="absolute right-6 top-5 z-10 -rotate-[9deg] rounded-[10px] border-[2.5px] border-stamp px-3 py-2 text-center font-mono text-stamp opacity-90">

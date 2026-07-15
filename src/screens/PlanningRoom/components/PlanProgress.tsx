@@ -15,7 +15,7 @@ const STEPS = [
           const running = i === current;
   
           return (
-            <div
+            <div style={{ fontFamily: "Pretendard, sans-serif" }}
               key={label}
               className={`flex items-center gap-3.5 border-b border-line-soft py-3.5 transition-opacity duration-300 last:border-b-0 ${
                 done || running ? "opacity-100" : "opacity-30"

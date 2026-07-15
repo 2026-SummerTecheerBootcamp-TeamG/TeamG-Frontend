@@ -3,7 +3,7 @@ import type { ChatMessage } from "@/types/trip";
 
 const EXAMPLES = [
   "후쿠오카, 9/12~9/14, 2명, 100만원",
-  "오사카 3박 4일 성인 2명 130만원으로",
+  "오사카, 2월 3일~2월 6일, 성인 2명, 130만원으로",
   "10/3부터 5일간 다낭, 4명, 예산 300만",
 ];
 
@@ -48,7 +48,7 @@ export default function ChatPanel({
   };
 
   return (
-    <div className="flex h-[620px] flex-col overflow-hidden rounded-card border border-line bg-paper shadow-[0_1px_2px_rgba(15,20,24,.04),0_18px_40px_-28px_rgba(15,20,24,.3)] lg:sticky lg:top-[88px]">
+    <div style={{ fontFamily: "Pretendard, sans-serif" }} className="flex h-[620px] flex-col overflow-hidden rounded-card border border-line bg-paper shadow-[0_1px_2px_rgba(15,20,24,.04),0_18px_40px_-28px_rgba(15,20,24,.3)] lg:sticky lg:top-[88px]">
       {/* 헤더 */}
       <div className="flex items-center justify-between border-b border-line-soft px-[18px] py-3.5">
         <p className="text-sm font-bold tracking-[-0.02em]">
@@ -57,7 +57,7 @@ export default function ChatPanel({
         </p>
         <button
           onClick={onReset}
-          className="font-mono text-[11px] text-ink-3 transition-colors hover:text-ink"
+          className=" text-[11px] text-ink-3 transition-colors hover:text-ink"
         >
           처음부터
         </button>
@@ -153,7 +153,7 @@ export default function ChatPanel({
         {/* 예시 문장: 클릭하면 입력창에 채워지기만 한다 (바로 보내지 않음) */}
         {!hideExamples && (
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[10.5px] tracking-[0.08em] text-ink-3">
+            <span className="text-[10.5px] tracking-[0.08em] text-ink-3">
               이렇게
             </span>
             {EXAMPLES.map((ex) => (

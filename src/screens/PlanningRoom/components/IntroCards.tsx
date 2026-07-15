@@ -41,7 +41,7 @@ const ITEMS: Item[] = [
 /** 계획서에 항상 확정되어 들어가는 네 가지 */
 export default function IntroCards() {
   return (
-    <section className="pb-24">
+    <section style={{ fontFamily: "Pretendard, sans-serif" }} className="pb-24">
       <h2 className="text-[clamp(22px,2.6vw,30px)] font-extrabold tracking-[-0.04em]">
         한 장에 들어가는 것
       </h2>
@@ -55,7 +55,7 @@ export default function IntroCards() {
             key={it.no}
             className="rounded-card border border-line bg-paper p-5 transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_16px_30px_-22px_rgba(15,20,24,.4)]"
           >
-            <p className="font-mono text-[11px] tracking-[0.1em] text-ink-3">
+            <p className="text-[11px] tracking-[0.1em] text-ink-3">
               {it.no} / {it.label}
             </p>
             <h3 className="mb-1.5 mt-3 text-base font-bold tracking-[-0.03em]">
