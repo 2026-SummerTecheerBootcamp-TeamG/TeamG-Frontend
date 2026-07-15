@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PlanDay } from "@/types/trip";
 import { loadGoogleMaps } from "@/lib/googleMaps";
 
@@ -12,12 +12,20 @@ const DAY_COLORS = [
   "#1F8FD8",
 ];
 
-interface Props {
-  days: PlanDay[];
+interface HotelPin {
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
-/** 하루 방문지를 순서대로 잇는 동선 (숙소 좌표는 서버가 안 내려줘서 기준점으로 못 씀) */
-export default function RouteMap({ days }: Props) {
+interface Props {
+  days: PlanDay[];
+  /** 좌표가 있으면 숙소를 기준점으로 삼아 숙소→방문지→숙소 동선을 그린다 */
+  hotel?: HotelPin | null;
+}
+
+/** 숙소 좌표가 있으면 그 지점을 기준으로, 없으면 방문지 순서만으로 동선을 그린다 */
+export default function RouteMap({ days, hotel }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   /** 지도에 올린 마커·선을 지우려고 들고 있는다 */
@@ -29,11 +37,21 @@ export default function RouteMap({ days }: Props) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  const allPoints = days.flatMap((day) =>
-    day.items
-      .filter((item) => item.latitude != null && item.longitude != null)
-      .map((item) => ({ lat: item.latitude!, lng: item.longitude! })),
+  const hotelLat = hotel?.latitude ?? null;
+  const hotelLng = hotel?.longitude ?? null;
+  const hotelPos = useMemo(
+    () => (hotelLat != null && hotelLng != null ? { lat: hotelLat, lng: hotelLng } : null),
+    [hotelLat, hotelLng],
   );
+
+  const allPoints = [
+    ...(hotelPos ? [hotelPos] : []),
+    ...days.flatMap((day) =>
+      day.items
+        .filter((item) => item.latitude != null && item.longitude != null)
+        .map((item) => ({ lat: item.latitude!, lng: item.longitude! })),
+    ),
+  ];
 
   // 지도 초기화
   useEffect(() => {
@@ -78,6 +96,35 @@ export default function RouteMap({ days }: Props) {
 
     const bounds = new google.maps.LatLngBounds();
 
+    // 숙소 마커 (좌표가 있을 때만)
+    if (hotelPos) {
+      bounds.extend(hotelPos);
+      const hotelMarker = new google.maps.Marker({
+        position: hotelPos,
+        map,
+        title: hotel?.name,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: "#0F1418",
+          fillOpacity: 1,
+          strokeColor: "#FFFFFF",
+          strokeWeight: 2,
+        },
+        zIndex: 100,
+      });
+      hotelMarker.addListener("click", () => {
+        infoRef.current?.setContent(
+          `<div style="font-family:Pretendard,sans-serif;padding:2px 4px">
+            <strong style="font-size:13px">${hotel?.name ?? "숙소"}</strong>
+            <p style="margin:4px 0 0;font-size:12px;color:#57626C">숙소</p>
+          </div>`,
+        );
+        infoRef.current?.open(map, hotelMarker);
+      });
+      drawnRef.current.push(hotelMarker);
+    }
+
     // 보여줄 날짜만 고른다
     const targetDays = days
       .map((day, index) => ({ day, index }))
@@ -86,7 +133,7 @@ export default function RouteMap({ days }: Props) {
     targetDays.forEach(({ day, index }) => {
       const color = DAY_COLORS[index % DAY_COLORS.length];
       const points = day.items.filter((item) => item.latitude != null && item.longitude != null);
-      const path: google.maps.LatLngLiteral[] = [];
+      const path: google.maps.LatLngLiteral[] = hotelPos ? [hotelPos] : [];
 
       points.forEach((item, i) => {
         const pos = { lat: item.latitude!, lng: item.longitude! };
@@ -131,6 +178,9 @@ export default function RouteMap({ days }: Props) {
         drawnRef.current.push(marker);
       });
 
+      // 숙소 기준일 때만 다시 숙소로 돌아온다
+      if (hotelPos) path.push(hotelPos);
+
       if (path.length < 2) return;
 
       const line = new google.maps.Polyline({
@@ -156,13 +206,13 @@ export default function RouteMap({ days }: Props) {
     });
 
     if (!bounds.isEmpty()) map.fitBounds(bounds, 48);
-  }, [days, activeDay, isLoading]);
+  }, [days, activeDay, isLoading, hotelPos, hotel?.name]);
 
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <p className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
-          동선 지도 · 방문 순서대로
+          동선 지도 {hotelPos ? "· 숙소에서 출발해 다시 숙소로" : "· 방문 순서대로"}
         </p>
 
         <div className="ml-auto flex flex-wrap gap-1.5">
@@ -205,6 +255,12 @@ export default function RouteMap({ days }: Props) {
 
       {/* 범례 */}
       <div className="mt-2.5 flex flex-wrap gap-3.5 text-xs text-ink-3">
+        {hotelPos && (
+          <span className="flex items-center gap-1.5">
+            <i className="h-2 w-2 rounded-full bg-ink" />
+            숙소
+          </span>
+        )}
         {days.map((_, i) => (
           <span key={i} className="flex items-center gap-1.5">
             <i

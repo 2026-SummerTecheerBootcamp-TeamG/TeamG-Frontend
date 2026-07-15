@@ -121,6 +121,11 @@ export interface PlanFlight {
   price_krw: number;
   utility: number | null;
   booking_url: string | null;
+  /** "YYYY-MM-DD HH:MM" (SerpApi 원본 형식, 가는 편 기준) */
+  departure_time: string | null;
+  arrival_time: string | null;
+  duration_min: number | null;
+  stops: number | null;
 }
 
 export interface PlanHotel {
@@ -129,6 +134,9 @@ export interface PlanHotel {
   price_krw: number;
   utility: number | null;
   booking_url: string | null;
+  stars: number | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 /** 구글 장소 enrichment 결과 - 형태가 느슨해서 필드 존재를 방어적으로 확인해야 함 */
