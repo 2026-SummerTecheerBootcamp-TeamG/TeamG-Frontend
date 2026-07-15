@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import ChatPanel from "./components/ChatPanel";
@@ -9,28 +10,47 @@ import { usePlan } from "./hooks/usePlan";
 import { formatWon } from "./lib/parseRequest";
 
 export default function PlanningRoom() {
-  const { user, isLoggedIn } = useAuth();
+  const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
 
-  const { plan, status, step, version, start, edit, confirm } = usePlan();
+  const { plan, request, status, step, version, error, start, editWithMessage, confirm } =
+    usePlan();
 
   const chat = useChat({
     hasPlan: status === "ready" || status === "confirmed",
     onReady: start,
-    onEdit: edit,
+    onEdit: editWithMessage,
   });
 
+  /** 계획 생성/실패를 챗 쪽에 알린다 */
+  const notifiedStatusRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (status === "ready" && plan && notifiedStatusRef.current !== `ready:${version}`) {
+      notifiedStatusRef.current = `ready:${version}`;
+      const al = plan.allocation;
+      const totalText =
+        al && "total_cost" in al ? `총 ${formatWon(al.total_cost)}원` : "";
+      chat.notify(`계획서를 완성했습니다. ${totalText} 오른쪽에서 확인해 주세요.`.trim());
+    }
+    if (status === "error" && error && notifiedStatusRef.current !== `error:${error}`) {
+      notifiedStatusRef.current = `error:${error}`;
+      chat.notify(error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, version, error]);
+
   /** 확정: 로그인 안 했으면 로그인 화면으로 보낸다 */
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!isLoggedIn) {
       navigate("/login", { state: { from: "/" } });
       return;
     }
-    confirm();
-    if (plan) {
-      chat.notify(
-        `계획을 확정했습니다. ${plan.city} ${plan.nights}박 ${plan.nights + 1}일, 총 ${formatWon(plan.allocation.total)}원.\n마이페이지에서 다시 볼 수 있어요.`,
-      );
+    if (!plan) return;
+    const ok = await confirm();
+    if (ok) {
+      chat.notify("계획을 확정했습니다.\n마이페이지에서 다시 볼 수 있어요.");
+    } else {
+      chat.notify("계획을 확정하지 못했습니다. 잠시 후 다시 시도해 주세요.");
     }
   };
 
@@ -92,13 +112,25 @@ export default function PlanningRoom() {
 
             {status === "building" && <PlanProgress current={step} />}
 
+            {status === "error" && (
+              <div className="grid h-[620px] place-items-center px-8 text-center">
+                <div className="max-w-[330px]">
+                  <h3 className="mb-2 text-[17px] font-bold tracking-[-0.03em] text-stamp">
+                    계획을 만들지 못했습니다
+                  </h3>
+                  <p className="break-keep text-sm text-ink-3">
+                    {error ?? "잠시 후 다시 시도해 주세요."}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {(status === "ready" || status === "confirmed") && plan && (
               <PlanSheet
                 plan={plan}
-                budget={chat.request.budget ?? plan.allocation.total}
+                request={request}
                 version={version}
                 status={status}
-                departureIata={user?.defaultDeparture.iata ?? "ICN"}
                 onConfirm={handleConfirm}
               />
             )}

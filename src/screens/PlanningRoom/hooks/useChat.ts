@@ -1,46 +1,41 @@
+import axios from "axios";
 import { useCallback, useRef, useState } from "react";
-import type { ChatMessage, TripRequest } from "@/types/trip";
-import {
-  buildExample,
-  formatDate,
-  formatWon,
-  getMissingSlots,
-  getNights,
-  mergeRequest,
-  toSlotChips,
-} from "../lib/parseRequest";
-
-const EMPTY_REQUEST: TripRequest = {
-  city: null,
-  start: null,
-  end: null,
-  pax: null,
-  budget: null,
-};
+import type { ChatMessage, ParsedFields } from "@/types/trip";
+import { parseAnswer, parseMessage } from "@/api/trips";
+import { fieldsToChips, summarizeFields } from "../lib/parseRequest";
 
 const GREETING =
   "가는 날짜, 인원, 목적지, 예산을 한 문장으로 적어주세요.\n예: “후쿠오카, 9/12~9/14, 2명, 100만원”";
 
+function getErrorMessage(e: unknown): string {
+  if (axios.isAxiosError(e)) {
+    const data: unknown = e.response?.data;
+    if (data && typeof data === "object" && "error" in data && typeof (data as { error?: unknown }).error === "string") {
+      return (data as { error: string }).error;
+    }
+  }
+  return "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+}
+
 interface Options {
-  /** 슬롯이 다 찼을 때 (계획 생성) */
-  onReady: (req: TripRequest) => void;
+  /** 슬롯이 다 찼을 때 (계획 생성) - 확정된 parse_id와 필드를 넘긴다 */
+  onReady: (parseId: string, fields: ParsedFields) => void;
   /** 계획이 이미 있을 때 들어온 수정 요청 */
-  onEdit: (
-    req: TripRequest,
-    text: string,
-  ) => { request: TripRequest; note: string };
+  onEdit: (text: string) => Promise<{ note: string }>;
   /** 계획이 이미 그려져 있는지 */
   hasPlan: boolean;
 }
 
-/** 챗 대화와 요청 슬롯을 관리한다 */
+/** 챗 대화와 서버 파싱 세션을 관리한다 */
 export function useChat({ onReady, onEdit, hasPlan }: Options) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: "greet", role: "bot", text: GREETING },
   ]);
-  const [request, setRequest] = useState<TripRequest>(EMPTY_REQUEST);
   const [isTyping, setIsTyping] = useState(false);
   const [isReady, setIsReady] = useState(false);
+
+  /** 재질문 대기 중인 parse_id (없으면 새 파싱) */
+  const pendingParseIdRef = useRef<string | null>(null);
 
   const idRef = useRef(0);
   const nextId = () => `m${++idRef.current}`;
@@ -55,48 +50,44 @@ export function useChat({ onReady, onEdit, hasPlan }: Options) {
 
       push({ role: "user", text });
       setIsTyping(true);
-      await new Promise((r) => setTimeout(r, 700));
 
-      // 계획이 이미 있으면 수정 요청으로 본다
-      if (hasPlan) {
-        const merged = mergeRequest(request, text);
-        const { request: edited, note } = onEdit(merged, text);
-        setRequest(edited);
-        push({ role: "bot", text: `${note} 계획서를 갱신했습니다.` });
-        setIsTyping(false);
-        return;
-      }
+      try {
+        if (hasPlan) {
+          const { note } = await onEdit(text);
+          push({ role: "bot", text: note });
+          return;
+        }
 
-      // TODO: POST /api/v1/agent/parse (재질문이면 /parse/answer) 로 교체
-      const next = mergeRequest(request, text);
-      setRequest(next);
+        const result = pendingParseIdRef.current
+          ? await parseAnswer(pendingParseIdRef.current, text)
+          : await parseMessage(text);
 
-      const missing = getMissingSlots(next);
-      const chips = toSlotChips(next);
+        // missing_slots는 완전한 응답에도 참고용으로 남아있을 수 있다.
+        // 실제 게이트 통과 여부는 reask_message 존재로만 판단한다 (destinations/budget만 필수).
+        if (result.reask_message) {
+          pendingParseIdRef.current = result.parse_id;
+          push({
+            role: "bot",
+            text: result.reask_message,
+            slots: fieldsToChips(result.fields, result.missing_slots),
+          });
+          return;
+        }
 
-      if (missing.length > 0) {
-        push({
-          role: "bot",
-          text: `${missing.join("과 ")}만 더 알려주세요. 문장으로 적어주셔도 됩니다.\n예: “${buildExample(missing)}”`,
-          slots: chips,
-        });
-      } else {
-        const nights = getNights(next);
-        push({
-          role: "bot",
-          text: `${next.city} ${nights}박 ${nights + 1}일, ${formatDate(next.start!)}~${formatDate(next.end!)}, ${next.pax}명, 예산 ${formatWon(next.budget!)}원으로 계획을 짭니다.`,
-          slots: chips,
-        });
+        pendingParseIdRef.current = null;
+        push({ role: "bot", text: summarizeFields(result.fields), slots: fieldsToChips(result.fields, []) });
         setIsReady(true);
-        onReady(next);
+        onReady(result.parse_id, result.fields);
+      } catch (e) {
+        push({ role: "bot", text: getErrorMessage(e) });
+      } finally {
+        setIsTyping(false);
       }
-
-      setIsTyping(false);
     },
-    [hasPlan, isTyping, onEdit, onReady, push, request],
+    [hasPlan, isTyping, onEdit, onReady, push],
   );
 
-  /** 계획서 쪽에서 알려주는 안내 (확정 완료 등) */
+  /** 계획서 쪽에서 알려주는 안내 (완료/확정/실패 등) */
   const notify = useCallback(
     (text: string) => push({ role: "bot", text }),
     [push],
@@ -104,11 +95,11 @@ export function useChat({ onReady, onEdit, hasPlan }: Options) {
 
   const reset = useCallback(() => {
     idRef.current = 0;
+    pendingParseIdRef.current = null;
     setMessages([{ id: "greet", role: "bot", text: GREETING }]);
-    setRequest(EMPTY_REQUEST);
     setIsReady(false);
     setIsTyping(false);
   }, []);
 
-  return { messages, request, isTyping, isReady, send, notify, reset };
+  return { messages, isTyping, isReady, send, notify, reset };
 }
