@@ -23,6 +23,16 @@ const formatDay = (iso: string) => {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAY[d.getDay()]})`;
 };
 
+/** "2026-09-15 09:20" -> "09:20" */
+const formatClock = (raw: string) => raw.split(" ")[1] ?? raw;
+
+/** 175(분) -> "2시간 55분" */
+const formatDuration = (min: number) => {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h}시간${m > 0 ? ` ${m}분` : ""}` : `${m}분`;
+};
+
 export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
   const { allocation: al, flight, hotel, days } = plan;
 
@@ -136,6 +146,13 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
               </span>
             </div>
 
+            {budgetAl.reserve > 0 && (
+              <p className="mb-3 text-[11.5px] text-ink-3">
+                예비비 {formatWon(budgetAl.reserve)}원(5%)을 제외하면{" "}
+                {formatWon(budgetAl.spendable)}원까지 사용할 수 있어요.
+              </p>
+            )}
+
             <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-md bg-[#edf0f3]">
               <span
                 className="block rounded-sm bg-cobalt transition-[width] duration-700"
@@ -195,6 +212,27 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <p className="text-base font-bold tracking-[-0.025em]">{flight.airline}</p>
+              {(flight.departure_time || flight.arrival_time) && (
+                <div className="mt-1.5 flex items-center gap-2">
+                  {flight.departure_time && (
+                    <span className="text-[15px] font-bold tabular-nums">
+                      {formatClock(flight.departure_time)}
+                    </span>
+                  )}
+                  {(flight.duration_min != null || flight.stops != null) && (
+                    <span className="text-[11px] text-ink-3">
+                      {flight.duration_min != null && formatDuration(flight.duration_min)}
+                      {flight.stops != null &&
+                        ` · ${flight.stops === 0 ? "직항" : `경유 ${flight.stops}회`}`}
+                    </span>
+                  )}
+                  {flight.arrival_time && (
+                    <span className="text-[15px] font-bold tabular-nums">
+                      {formatClock(flight.arrival_time)}
+                    </span>
+                  )}
+                </div>
+              )}
               {flight.utility !== null && (
                 <p className="mt-1 text-[12.5px] text-ink-3">만족도 점수 {flight.utility}</p>
               )}
@@ -239,6 +277,12 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
             <div className="h-[74px] w-[74px] shrink-0 rounded-xl bg-gradient-to-br from-[#20303f] to-[#3c5468]" />
             <div className="flex-1">
               <p className="text-base font-bold tracking-[-0.025em]">{hotel.name}</p>
+              {hotel.stars !== null && (
+                <p className="mt-1 text-[11.5px] tracking-[0.1em] text-amber">
+                  {"★".repeat(hotel.stars)}
+                  {"☆".repeat(Math.max(0, 5 - hotel.stars))}
+                </p>
+              )}
               {pax !== null && (
                 <p className="mt-1 text-[12.5px] text-ink-3">
                   트윈 {Math.ceil(pax / 2)}실{nights > 0 && ` · ${nights}박`}
@@ -273,7 +317,7 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
       {/* 동선 지도 */}
       {days.length > 0 && (
         <div className="border-b border-line px-7 py-5">
-          <RouteMap days={days} />
+          <RouteMap days={days} hotel={hotel} />
         </div>
       )}
 
