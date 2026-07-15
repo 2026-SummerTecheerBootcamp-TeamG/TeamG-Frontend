@@ -4,7 +4,7 @@ import type { ChatMessage } from "@/types/trip";
 const EXAMPLES = [
   "후쿠오카, 9/12~9/14, 2명, 100만원",
   "오사카, 2월 3일~2월 6일, 성인 2명, 130만원으로",
-  "10/3부터 5일간 다낭, 4명, 예산 300만",
+  "10/3부터 5일간 다낭, 4명, 예산 350만",
 ];
 
 interface Props {
