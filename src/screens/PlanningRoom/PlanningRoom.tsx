@@ -98,8 +98,8 @@ export default function PlanningRoom() {
             {status === "idle" && (
               <div className="grid h-[620px] place-items-center px-8 text-center">
                 <div className="max-w-[330px]">
-                  <span className="mx-auto mb-5 block h-[110px] w-px bg-[repeating-linear-gradient(180deg,var(--color-line)_0_5px,transparent_5px_11px)]" />
-                  <h3 className="mb-2 text-[17px] font-bold tracking-[-0.03em]">
+                  <span className="mx-auto mb-3 block h-0 w-px bg-[repeating-linear-gradient(180deg,var(--color-line)_0_5px,transparent_5px_11px)]" />
+                  <h3 className="mb-2 text-[19px] font-bold tracking-[-0.03em]">
                     여기에 계획이 그려집니다
                   </h3>
                   <p className="break-keep text-sm text-ink-3">
