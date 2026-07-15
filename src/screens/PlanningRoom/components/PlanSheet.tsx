@@ -1,5 +1,9 @@
+import { useState } from "react";
 import RouteMap from "./RouteMap";
 import type { ParsedFields, PlanDetail, PlanStatus } from "@/types/trip";
+import { preparePayment } from "@/api/payments";
+import { getApiErrorMessage } from "@/lib/api";
+import { loadTossPayments } from "@/lib/tossPayments";
 import { formatWon } from "../lib/parseRequest";
 
 interface Props {
@@ -23,6 +27,33 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
   const { allocation: al, flight, hotel, days } = plan;
 
   const confirmed = status === "confirmed";
+
+  const [isPaying, setIsPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+
+  /** 확정된 플랜 결제: 서버가 금액을 정하고(prepare) 토스 결제창을 연다 */
+  const handlePay = async () => {
+    setIsPaying(true);
+    setPayError(null);
+    try {
+      const [order] = await Promise.all([preparePayment(plan.plan_id), loadTossPayments()]);
+      const toss = window.TossPayments!(order.client_key);
+      const payment = toss.payment({ customerKey: "ANONYMOUS" });
+      const backHere = `${window.location.origin}/payment/result`;
+      await payment.requestPayment({
+        method: "CARD",
+        amount: { currency: "KRW", value: order.amount },
+        orderId: order.order_id,
+        orderName: order.order_name,
+        successUrl: backHere,
+        failUrl: `${backHere}?fail=1`,
+      });
+      // 성공하면 브라우저가 토스 결제창으로 이동하므로 이 아래는 보통 실행되지 않는다
+    } catch (e) {
+      setPayError(getApiErrorMessage(e));
+      setIsPaying(false);
+    }
+  };
 
   const cities = days.length > 0
     ? Array.from(new Set(days.map((d) => d.city_name).filter(Boolean))).join(" · ")
@@ -296,26 +327,42 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
         ))}
       </div>
 
-      {/* 확정 (읽기 전용이면 숨김) */}
+      {/* 확정 / 결제 (읽기 전용이면 숨김) */}
       {!readOnly && (
-      <div className="sticky bottom-0 flex items-center gap-3 border-t border-line bg-white/90 px-7 py-3.5 backdrop-blur">
-        <p className="text-[12.5px] text-ink-3">
-          {confirmed
-            ? "마이페이지에 저장했습니다."
-            : "고칠 곳이 있으면 왼쪽에 문장으로 적어주세요."}
-        </p>
-        <button
-          onClick={onConfirm}
-          disabled={confirmed}
-          className={`ml-auto whitespace-nowrap rounded-field px-5 py-2.5 text-sm font-bold text-white transition-all ${
-            confirmed
-              ? "cursor-default bg-teal"
-              : "bg-cobalt hover:-translate-y-px hover:bg-[#1c36c4]"
-          }`}
-        >
-          {confirmed ? "확정됨" : "이 계획으로 확정"}
-        </button>
-      </div>
+        <div className="sticky bottom-0 border-t border-line bg-white/90 px-7 py-3.5 backdrop-blur">
+          <div className="flex items-center gap-3">
+            <p className="text-[12.5px] text-ink-3">
+              {confirmed
+                ? hotel
+                  ? "숙소를 결제하면 자동으로 예약까지 진행됩니다."
+                  : "마이페이지에 저장했습니다."
+                : "고칠 곳이 있으면 왼쪽에 문장으로 적어주세요."}
+            </p>
+
+            {confirmed && hotel ? (
+              <button
+                onClick={handlePay}
+                disabled={isPaying}
+                className="ml-auto whitespace-nowrap rounded-field bg-cobalt px-5 py-2.5 text-sm font-bold text-white transition-all hover:-translate-y-px hover:bg-[#1c36c4] disabled:cursor-default disabled:opacity-60"
+              >
+                {isPaying ? "결제창 여는 중..." : "숙소 결제하기"}
+              </button>
+            ) : (
+              <button
+                onClick={onConfirm}
+                disabled={confirmed}
+                className={`ml-auto whitespace-nowrap rounded-field px-5 py-2.5 text-sm font-bold text-white transition-all ${
+                  confirmed
+                    ? "cursor-default bg-teal"
+                    : "bg-cobalt hover:-translate-y-px hover:bg-[#1c36c4]"
+                }`}
+              >
+                {confirmed ? "확정됨" : "이 계획으로 확정"}
+              </button>
+            )}
+          </div>
+          {payError && <p className="mt-2 text-[12px] text-stamp">{payError}</p>}
+        </div>
       )}
     </div>
   );

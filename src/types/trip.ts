@@ -177,6 +177,20 @@ export interface PlanDetail {
   created_at: string;
 }
 
+/* ───────── 여행 목록 (GET /api/v1/trips/) ───────── */
+
+export interface TripSummary {
+  request_id: number;
+  departure: string;
+  destinations: string[];
+  start_date: string;
+  end_date: string;
+  total_budget: number;
+  plan_id: number | null;
+  status: "processing" | "draft" | "confirmed" | null;
+  created_at: string;
+}
+
 /* ───────── 대화형 수정 (POST /api/v1/trips/plans/{plan_id}/edits) ───────── */
 
 export interface PlanEditAccepted {

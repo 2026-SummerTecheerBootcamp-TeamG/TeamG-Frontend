@@ -6,7 +6,12 @@ import type {
   RunDetailResponse,
   PlanDetail,
   PlanEditResponse,
+  TripSummary,
 } from "@/types/trip";
+
+/** GET /api/v1/trips/ - 내 여행 요청/플랜 목록 (trips 앱 루트라 trailing slash 필요) */
+export const listTrips = () =>
+  api.get<{ trips: TripSummary[] }>("/trips/").then((res) => res.data.trips);
 
 /** POST /api/v1/agents/parse - 자연어 → 구조화 슬롯 */
 export const parseMessage = (message: string) =>

@@ -126,3 +126,17 @@ export const firstError = (errors: ApiFieldErrors, field: string): string | unde
   if (!value) return undefined;
   return Array.isArray(value) ? value[0] : value;
 };
+
+/**
+ * agents/trips/payments 계열 뷰는 필드 에러가 아니라 { "error": "..." } 하나만 내려준다.
+ * 그 문자열만 뽑아쓰는 헬퍼 (챗/토스트 표시용).
+ */
+export const getApiErrorMessage = (error: unknown): string => {
+  if (axios.isAxiosError(error)) {
+    const data: unknown = error.response?.data;
+    if (data && typeof data === "object" && "error" in data && typeof (data as { error?: unknown }).error === "string") {
+      return (data as { error: string }).error;
+    }
+  }
+  return "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+};
