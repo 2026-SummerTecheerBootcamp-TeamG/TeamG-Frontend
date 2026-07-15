@@ -1,15 +1,3 @@
-/** 자연어 파싱으로 채워지는 요청 슬롯 (POST /api/v1/agent/parse 의 fields) */
-export interface TripRequest {
-  city: string | null;
-  start: Date | null;
-  end: Date | null;
-  pax: number | null;
-  budget: number | null;
-}
-
-/** 아직 채워지지 않은 슬롯 이름 (missing_slots) */
-export type MissingSlot = "목적지" | "날짜" | "인원" | "예산";
-
 /** 챗 말풍선 */
 export interface ChatMessage {
   id: string;
@@ -18,86 +6,199 @@ export interface ChatMessage {
   slots?: { label: string; missing?: boolean }[];
 }
 
-/* ───────── 계획서 ───────── */
+/* ───────── 파싱 (POST /api/v1/agents/parse, /agents/parse/answer) ───────── */
 
-/** 항공 (plan.flight) */
-export interface Flight {
-  airline: string;
-  /** 1인 왕복가 */
-  price: number;
-  /** 편도 소요 시간 */
-  duration: string;
-  stops: number;
-  /** 가는 편 [출발시각, 도착시각] */
-  outbound: [string, string];
-  /** 오는 편 [출발시각, 도착시각] */
-  inbound: [string, string];
+export interface ParsedOrigin {
+  city: string | null;
+  iata: string | null;
 }
 
-/** 숙소 (plan.hotel) */
-export interface Hotel {
-  name: string;
-  /** 성급 */
-  stars: number;
-  /** 위치 설명 */
-  area: string;
-  /** 1박 요금 */
-  pricePerNight: number;
-  lat: number;
-  lng: number;
-}
-
-/** 일정의 한 장소 (days[].items[]) */
-export interface PlanItem {
-  /** 도착 시각 */
-  arriveAt: string;
-  placeName: string;
-  description: string;
-  /** 머무는 시간(분) */
-  stayMinutes: number;
-  /** 이 장소까지의 이동 */
-  transit: string;
-  /** 1인 비용 (0이면 무료) */
-  cost: number;
-  /** 식사 여부 */
-  isMeal?: boolean;
-  lat: number;
-  lng: number;
-}
-
-/** 하루 */
-export interface PlanDay {
-  date: Date;
-  items: PlanItem[];
-  /** '도착 후' / '출발 전' 같은 메모 */
-  note?: string;
-}
-
-/** 예산 정산 (allocation) */
-export interface Allocation {
-  flight: number;
-  hotel: number;
-  activity: number;
-  total: number;
-  /** 남은 금액 (음수면 초과) */
-  remaining: number;
-}
-
-/** 확정된 계획 한 벌 */
-export interface Plan {
+export interface ParsedDestination {
   city: string;
-  country: string;
-  iata: string;
-  /** 몇 박 */
-  nights: number;
-  pax: number;
-  flight: Flight;
-  hotel: Hotel;
-  days: PlanDay[];
-  allocation: Allocation;
-  /** 예산에 맞추려고 숙소 등급을 낮췄는지 */
-  downgraded: boolean;
+  city_en?: string | null;
+  country_code?: string | null;
+  iata?: string | null;
+  nights?: number | null;
 }
 
-/** 계획서 진행 상태 */
-export type PlanStatus = "idle" | "building" | "ready" | "confirmed";
+export interface ParsedPax {
+  adult: number;
+  child: number;
+}
+
+export interface ParsedDates {
+  start: string | null; // "YYYY-MM-DD"
+  end: string | null;
+}
+
+export interface ParsedFields {
+  origin: ParsedOrigin | null;
+  destinations: ParsedDestination[];
+  budget: number | null;
+  pax: ParsedPax;
+  themes: string[];
+  dates: ParsedDates;
+}
+
+/** 파이프라인 게이트 대상 슬롯만 (agents/parser/slot_validator.py REQUIRED_SLOTS) */
+export type MissingSlot = "destinations" | "budget" | "dates" | "pax";
+
+/** POST /agents/parse, /agents/parse/answer 응답 (슬롯 완전/부족 두 형태를 합침) */
+export interface ParseResult {
+  parse_id: string;
+  fields: ParsedFields;
+  missing_slots: MissingSlot[];
+  reask_message?: string;
+  assumed_fields?: string[];
+  filled_from_profile?: string[];
+  warnings?: string[];
+}
+
+/* ───────── 실행 (POST /api/v1/agents/runs, GET /agents/runs/{id}) ───────── */
+
+export interface RunCreateResponse {
+  run_id: string;
+  task_id: string;
+  plan_id: number | null;
+  status: "accepted";
+}
+
+export interface LocalEditResult {
+  run_id: string;
+  old_plan_id: number;
+  new_plan_id: number;
+  summary: string;
+  dropped_names: string[];
+}
+
+export interface RunDetailResponse {
+  run_id: string;
+  status: "running" | "completed" | "failed";
+  events: unknown[];
+  result: LocalEditResult | Record<string, unknown> | null;
+}
+
+/* ───────── 예산 배분 (agents/budget.py allocate_budget) ───────── */
+
+export interface AllocationBreakdown {
+  flight_krw: number;
+  hotel_krw: number;
+  activity_krw: number;
+}
+
+export interface AllocationFit {
+  status: "fit";
+  total_budget: number;
+  reserve: number;
+  spendable: number;
+  breakdown: AllocationBreakdown;
+  total_cost: number;
+  surplus: number;
+  utility_total: number;
+}
+
+export interface AllocationInsufficient {
+  status: "insufficient";
+  total_budget: number;
+  reserve: number;
+  spendable: number;
+  breakdown: AllocationBreakdown;
+  total_cost: number;
+  shortfall: number;
+}
+
+export interface AllocationNoCandidates {
+  status: "no_flights" | "no_hotels";
+  message: string;
+}
+
+export type Allocation = AllocationFit | AllocationInsufficient | AllocationNoCandidates;
+
+/* ───────── 계획 상세 (GET /api/v1/trips/plans/{plan_id}) ───────── */
+
+export interface PlanFlight {
+  airline: string;
+  price_krw: number;
+  utility: number | null;
+  booking_url: string | null;
+}
+
+export interface PlanHotel {
+  liteapi_hotel_id: string;
+  name: string;
+  price_krw: number;
+  utility: number | null;
+  booking_url: string | null;
+}
+
+/** 구글 장소 enrichment 결과 - 형태가 느슨해서 필드 존재를 방어적으로 확인해야 함 */
+export interface PlaceDetail {
+  rating?: number;
+  user_ratings?: number;
+  address?: string;
+  [key: string]: unknown;
+}
+
+export interface PlanItem {
+  visit_order: number;
+  place_name: string;
+  latitude: number | null;
+  longitude: number | null;
+  place_detail: PlaceDetail | null;
+  travel_min_to_next: number | null;
+  travel_mode: string | null;
+}
+
+export interface PlanDay {
+  day_number: number;
+  city_name: string | null;
+  date: string; // "YYYY-MM-DD"
+  items: PlanItem[];
+}
+
+export interface PlanBooking {
+  status: "confirmed" | "failed";
+  booking_id: string | null;
+  confirmation: string | null;
+  guest_name: string;
+  created_at: string;
+}
+
+export interface PlanDetail {
+  plan_id: number;
+  request_id: number;
+  status: "processing" | "draft" | "confirmed";
+  allocation: Allocation | null;
+  narrative: string | null;
+  flight: PlanFlight | null;
+  hotel: PlanHotel | null;
+  days: PlanDay[];
+  bookings: PlanBooking[];
+  created_at: string;
+}
+
+/* ───────── 대화형 수정 (POST /api/v1/trips/plans/{plan_id}/edits) ───────── */
+
+export interface PlanEditAccepted {
+  category: string;
+  reason: string;
+  run_id: string;
+  task_id: string;
+  /** 재계획(category === "재계획")일 때만 즉시 내려옴 */
+  plan_id?: number;
+  status: "accepted";
+}
+
+export interface PlanEditUnsupported {
+  category?: string;
+  /** 백엔드 오탈자 케이스 (agents/edit_router가 "국소수정"이 아닌 값을 반환할 때) */
+  caategory?: string;
+  reason: string;
+  supported: false;
+  message: string;
+}
+
+export type PlanEditResponse = PlanEditAccepted | PlanEditUnsupported;
+
+/** 화면 상태 (usePlan) */
+export type PlanStatus = "idle" | "building" | "ready" | "confirmed" | "error";

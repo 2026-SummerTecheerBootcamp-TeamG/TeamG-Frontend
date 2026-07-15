@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Plan } from "@/types/trip";
+import type { PlanDay } from "@/types/trip";
 import { loadGoogleMaps } from "@/lib/googleMaps";
 
 /** DAY별 색 (일정 타임라인과 맞춘다) */
@@ -13,11 +13,11 @@ const DAY_COLORS = [
 ];
 
 interface Props {
-  plan: Plan;
+  days: PlanDay[];
 }
 
-/** 숙소에서 출발해 방문지를 돌고 다시 숙소로 오는 하루 동선 */
-export default function RouteMap({ plan }: Props) {
+/** 하루 방문지를 순서대로 잇는 동선 (숙소 좌표는 서버가 안 내려줘서 기준점으로 못 씀) */
+export default function RouteMap({ days }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   /** 지도에 올린 마커·선을 지우려고 들고 있는다 */
@@ -29,16 +29,23 @@ export default function RouteMap({ plan }: Props) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
+  const allPoints = days.flatMap((day) =>
+    day.items
+      .filter((item) => item.latitude != null && item.longitude != null)
+      .map((item) => ({ lat: item.latitude!, lng: item.longitude! })),
+  );
+
   // 지도 초기화
   useEffect(() => {
     let cancelled = false;
+    if (allPoints.length === 0) return;
 
     loadGoogleMaps()
       .then(() => {
         if (cancelled || !boxRef.current) return;
 
         mapRef.current = new google.maps.Map(boxRef.current, {
-          center: { lat: plan.hotel.lat, lng: plan.hotel.lng },
+          center: allPoints[0],
           zoom: 12,
           disableDefaultUI: true,
           zoomControl: true,
@@ -57,7 +64,8 @@ export default function RouteMap({ plan }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [plan.hotel.lat, plan.hotel.lng]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 마커·경로 그리기 (날짜 필터가 바뀔 때마다 다시 그린다)
   useEffect(() => {
@@ -69,46 +77,19 @@ export default function RouteMap({ plan }: Props) {
     drawnRef.current = [];
 
     const bounds = new google.maps.LatLngBounds();
-    const hotelPos = { lat: plan.hotel.lat, lng: plan.hotel.lng };
-    bounds.extend(hotelPos);
-
-    // 숙소 마커
-    const hotelMarker = new google.maps.Marker({
-      position: hotelPos,
-      map,
-      title: plan.hotel.name,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 8,
-        fillColor: "#0F1418",
-        fillOpacity: 1,
-        strokeColor: "#FFFFFF",
-        strokeWeight: 2,
-      },
-      zIndex: 100,
-    });
-    hotelMarker.addListener("click", () => {
-      infoRef.current?.setContent(
-        `<div style="font-family:Pretendard,sans-serif;padding:2px 4px">
-          <strong style="font-size:13px">${plan.hotel.name}</strong>
-          <p style="margin:4px 0 0;font-size:12px;color:#57626C">숙소 · ${plan.hotel.area}</p>
-        </div>`,
-      );
-      infoRef.current?.open(map, hotelMarker);
-    });
-    drawnRef.current.push(hotelMarker);
 
     // 보여줄 날짜만 고른다
-    const targetDays = plan.days
+    const targetDays = days
       .map((day, index) => ({ day, index }))
       .filter(({ index }) => activeDay === null || index === activeDay);
 
     targetDays.forEach(({ day, index }) => {
       const color = DAY_COLORS[index % DAY_COLORS.length];
-      const path: google.maps.LatLngLiteral[] = [hotelPos];
+      const points = day.items.filter((item) => item.latitude != null && item.longitude != null);
+      const path: google.maps.LatLngLiteral[] = [];
 
-      day.items.forEach((item, i) => {
-        const pos = { lat: item.lat, lng: item.lng };
+      points.forEach((item, i) => {
+        const pos = { lat: item.latitude!, lng: item.longitude! };
         path.push(pos);
         bounds.extend(pos);
 
@@ -132,11 +113,15 @@ export default function RouteMap({ plan }: Props) {
         });
 
         marker.addListener("click", () => {
+          const transit =
+            item.travel_min_to_next != null
+              ? `다음 장소까지 ${item.travel_min_to_next}분`
+              : "";
           infoRef.current?.setContent(
             `<div style="font-family:Pretendard,sans-serif;padding:2px 4px">
-              <strong style="font-size:13px">${item.placeName}</strong>
+              <strong style="font-size:13px">${item.place_name}</strong>
               <p style="margin:4px 0 0;font-size:12px;color:#57626C">
-                DAY ${index + 1} · ${item.arriveAt} 도착 · ${item.stayMinutes}분
+                DAY ${index + 1} · 방문 순서 ${item.visit_order}${transit ? ` · ${transit}` : ""}
               </p>
             </div>`,
           );
@@ -146,8 +131,7 @@ export default function RouteMap({ plan }: Props) {
         drawnRef.current.push(marker);
       });
 
-      // 다시 숙소로 돌아온다
-      path.push(hotelPos);
+      if (path.length < 2) return;
 
       const line = new google.maps.Polyline({
         path,
@@ -171,18 +155,18 @@ export default function RouteMap({ plan }: Props) {
       drawnRef.current.push(line);
     });
 
-    map.fitBounds(bounds, 48);
-  }, [plan, activeDay, isLoading]);
+    if (!bounds.isEmpty()) map.fitBounds(bounds, 48);
+  }, [days, activeDay, isLoading]);
 
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <p className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
-          동선 지도 · 숙소에서 출발해 다시 숙소로
+          동선 지도 · 방문 순서대로
         </p>
 
         <div className="ml-auto flex flex-wrap gap-1.5">
-          {[null, ...plan.days.map((_, i) => i)].map((d) => (
+          {[null, ...days.map((_, i) => i)].map((d) => (
             <button
               key={d ?? "all"}
               onClick={() => setActiveDay(d)}
@@ -201,7 +185,7 @@ export default function RouteMap({ plan }: Props) {
       <div className="relative h-[320px] overflow-hidden rounded-xl border border-line bg-[#f2f5f7]">
         <div ref={boxRef} className="h-full w-full" />
 
-        {(isLoading || error) && (
+        {(isLoading || error || allPoints.length === 0) && (
           <div className="absolute inset-0 grid place-items-center bg-[#f2f5f7] px-6 text-center text-[13px] text-ink-3">
             {error ? (
               <div>
@@ -210,6 +194,8 @@ export default function RouteMap({ plan }: Props) {
                 </p>
                 <p>{error}</p>
               </div>
+            ) : allPoints.length === 0 ? (
+              "위치 정보가 있는 일정이 없습니다"
             ) : (
               "지도를 불러오는 중..."
             )}
@@ -219,11 +205,7 @@ export default function RouteMap({ plan }: Props) {
 
       {/* 범례 */}
       <div className="mt-2.5 flex flex-wrap gap-3.5 text-xs text-ink-3">
-        <span className="flex items-center gap-1.5">
-          <i className="h-2 w-2 rounded-full bg-ink" />
-          숙소
-        </span>
-        {plan.days.map((_, i) => (
+        {days.map((_, i) => (
           <span key={i} className="flex items-center gap-1.5">
             <i
               className="h-2 w-2 rounded-full"
