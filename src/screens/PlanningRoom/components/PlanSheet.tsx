@@ -1,3 +1,4 @@
+import RouteMap from "./RouteMap";
 import type { Plan, PlanStatus } from "@/types/trip";
 import { formatWon } from "../lib/parseRequest";
 
@@ -168,14 +169,9 @@ export default function PlanSheet({
         </div>
       </div>
 
-      {/* 동선 지도 자리 (이슈 6) */}
+      {/* 동선 지도 */}
       <div className="border-b border-line px-7 py-5">
-        <p className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
-          동선 지도
-        </p>
-        <div className="grid h-[180px] place-items-center rounded-xl border border-dashed border-line bg-[#f2f5f7] text-[13px] text-ink-3">
-          지도는 이슈 6에서 붙입니다
-        </div>
+        <RouteMap plan={plan} />
       </div>
 
       {/* 일정 */}
