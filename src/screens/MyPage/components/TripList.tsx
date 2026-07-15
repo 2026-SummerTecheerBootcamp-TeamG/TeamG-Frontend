@@ -26,7 +26,9 @@ export default function TripList({ trips, onSelect }: Props) {
     <div className="rounded-card border border-line bg-paper shadow-[0_1px_2px_rgba(15,20,24,.04)]">
       <div className="flex items-center justify-between border-b border-line-soft px-[22px] py-[18px]">
         <h3 className="text-[15px] font-bold tracking-[-0.025em]">저장한 계획</h3>
-        <span className="font-mono text-[11px] text-ink-3">{trips?.length ?? "-"}건</span>
+        <span className="text-[11px] text-ink-3" style={{ fontFamily: "Pretendard, sans-serif" }}>
+          {trips?.length ?? "-"}건
+        </span>
       </div>
 
       {trips === null ? (
@@ -56,17 +58,26 @@ export default function TripList({ trips, onSelect }: Props) {
                   <span className="block truncate text-base font-bold tracking-[-0.03em]">
                     {trip.destinations.join(" · ") || "목적지 미정"}
                   </span>
-                  <span className="mt-1 block font-mono text-[11.5px] text-ink-3">
+                  <span
+                    className="mt-1 block text-[11.5px] text-ink-3"
+                    style={{ fontFamily: "Pretendard, sans-serif" }}
+                  >
                     {fmt(trip.start_date)} – {fmt(trip.end_date)} · {trip.departure} 출발
                   </span>
                 </span>
 
                 <span className="whitespace-nowrap text-right">
-                  <span className="block font-mono text-[13.5px] font-bold">
+                  <span
+                    className="block text-[13.5px] font-bold"
+                    style={{ fontFamily: "Pretendard, sans-serif" }}
+                  >
                     {formatWon(trip.total_budget)}원
                   </span>
                   {trip.status && (
-                    <span className="mt-1 inline-block rounded bg-[#e6f6f2] px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.08em] text-teal">
+                    <span
+                      className="mt-1 inline-block rounded bg-[#e6f6f2] px-1.5 py-0.5 text-[10px] font-bold tracking-[0.08em] text-teal"
+                      style={{ fontFamily: "Pretendard, sans-serif" }}
+                    >
                       {STATUS_LABEL[trip.status]}
                     </span>
                   )}
