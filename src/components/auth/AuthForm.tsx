@@ -36,7 +36,7 @@ export function Field({
 }: { label: string; error?: string } & InputHTMLAttributes<HTMLInputElement>) {
   return (
     <label className="mt-4 block first:mt-0">
-      <span className="mb-1.5 block font-mono text-[10.5px] tracking-[0.1em] text-ink-3">
+      <span className="mb-1.5 block text-[10.5px] tracking-[0.1em] text-ink-3">
         {label}
       </span>
       <input
@@ -59,7 +59,7 @@ export function SelectField({
 }: { label: string; error?: string } & SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <label className="mt-4 block">
-      <span className="mb-1.5 block font-mono text-[10.5px] tracking-[0.1em] text-ink-3">
+      <span className="mb-1.5 block text-[10.5px] tracking-[0.1em] text-ink-3">
         {label}
       </span>
       <select

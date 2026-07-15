@@ -47,7 +47,7 @@ export default function Login() {
 
   return (
     <AuthCard title="로그인" desc="계획을 확정하고 저장하려면 로그인이 필요합니다.">
-      <form onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit} noValidate style={{ fontFamily: "Pretendard, sans-serif" }}>
         <Field
           label="이메일"
           type="email"

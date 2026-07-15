@@ -35,7 +35,7 @@ export default function PlanningRoom() {
   };
 
   return (
-    <div>
+    <div style={{ fontFamily: "Pretendard, sans-serif" }}>
       {/* 배경 이미지 섹션 — 전체 너비 */}
       <section
         className="relative pb-5 pt-10 md:pt-14"
@@ -48,12 +48,12 @@ export default function PlanningRoom() {
         <div className="absolute inset-0 bg-white/0" />
 
         <div className="relative mx-auto max-w-[1240px] px-5 md:px-7">
-          <p className="mb-4 flex items-center gap-2.5 font-mono text-[11.5px] font-bold uppercase tracking-[0.14em] text-white">
+          <p className="mb-4 flex items-center gap-2.5 text-[13.5px] font-bold uppercase tracking-[0.14em] text-white">
             검색 없이 → 바로 계획
             <span className="h-px w-[120px] bg-line" />
           </p>
-          <h1 className="max-w-[15ch] text-[clamp(32px,4.4vw,52px)] font-extrabold leading-[1.12] tracking-[-0.045em] text-white">
-            고르는 대신 적어보세요.
+          <h1 className="text-[clamp(32px,4.4vw,52px)] font-extrabold leading-[1.12] tracking-[-0.045em] text-white">
+            고르는 대신, 적어보세요.
           </h1>
           <p className="mt-4 max-w-[46ch] text-[16.5px] text-white">
             가는 날짜, 인원, 목적지, 예산을 입력하면
