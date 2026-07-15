@@ -107,5 +107,6 @@ export default function PlanningRoom() {
 
         <IntroCards />
       </div>
+    </div>
   );
 }
