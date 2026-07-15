@@ -89,7 +89,7 @@ export default function ChatPanel({
                 {m.slots.map((s) => (
                   <span
                     key={s.label}
-                    className={`rounded-md px-2 py-1 font-mono text-[11px] font-semibold ${
+                    className={`rounded-md px-2 py-1 text-[11px] font-semibold ${
                       s.missing
                         ? "bg-[#fef0ee] text-stamp"
                         : "bg-cobalt-soft text-cobalt"

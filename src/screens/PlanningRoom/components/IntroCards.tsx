@@ -19,7 +19,7 @@ const ITEMS: Item[] = [
     no: "02",
     label: "숙소",
     title: "묵을 곳 한 곳",
-    desc: "동선 한가운데에 두고 이동 시간을 줄인 숙소.",
+    desc: "동선 한가운데에 두고 이동 시간을 줄인 최적의 숙소.",
     rule: "bg-teal",
   },
   {
@@ -33,7 +33,7 @@ const ITEMS: Item[] = [
     no: "04",
     label: "예산",
     title: "남는 돈이 보이는 정산",
-    desc: "적어낸 예산을 넘지 않게 항목별로 나눈 금액.",
+    desc: "적어낸 예산을 넘지 않게 항목별로 나눈 맞춤형 금액.",
     rule: "bg-amber",
   },
 ];
