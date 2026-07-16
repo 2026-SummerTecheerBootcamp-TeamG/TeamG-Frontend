@@ -45,6 +45,15 @@ export const createRun = (parseId: string) =>
 export const getRun = (runId: string) =>
   api.get<RunDetailResponse>(`/agents/runs/${runId}`).then((res) => res.data);
 
+/** POST /api/v1/trips/plans/{plan_id}/ticket - 항공 발권 접수 (자체 mock 공급자) */
+export const ticketFlight = (planId: number) =>
+  api
+    .post<{ run_id: string; task_id: string; status: "accepted" }>(
+      `/trips/plans/${planId}/ticket`,
+      {},
+    )
+    .then((res) => res.data);
+
 /** GET /api/v1/trips/plans/{plan_id} - 저장된 플랜 스냅샷 */
 export const getPlan = (planId: number) =>
   api.get<PlanDetail>(`/trips/plans/${planId}`).then((res) => res.data);
