@@ -26,6 +26,13 @@ const formatDay = (iso: string) => {
 /** "2026-09-15 09:20" -> "09:20" */
 const formatClock = (raw: string) => raw.split(" ")[1] ?? raw;
 
+/** "2026-07-16T14:32:10+09:00" -> "2026-07-16 14:32" */
+const formatDateTime = (iso: string) => {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 /** 175(분) -> "2시간 55분" */
 const formatDuration = (min: number) => {
   const h = Math.floor(min / 60);
@@ -34,7 +41,9 @@ const formatDuration = (min: number) => {
 };
 
 export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
-  const { allocation: al, flight, hotel, days } = plan;
+  const { allocation: al, flight, hotel, days, payment, bookings } = plan;
+  /** 재시도 이력까지 시간순으로 들어있으니 마지막(최근) 건 기준으로 표시 */
+  const lastBooking = bookings.length > 0 ? bookings[bookings.length - 1] : null;
 
   const confirmed = status === "confirmed";
 
@@ -272,7 +281,7 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
             <p className="text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
               숙소{nights > 0 && ` · ${nights}박`}
             </p>
-            {confirmed && !readOnly && (
+            {confirmed && !readOnly && !payment && (
               <button
                 onClick={handlePay}
                 disabled={isPaying}
@@ -319,6 +328,24 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
             >
               숙소 확인하러 가기 →
             </a>
+          )}
+
+          {/* 결제/예약 상태 - 결제 이력이나 예약 시도가 없으면 표시하지 않음 */}
+          {(payment || lastBooking) && (
+            <div className="mt-3 rounded-lg bg-[#f4f6f8] px-3.5 py-3 text-[12.5px] leading-relaxed text-ink-2">
+              {payment && (
+                <p>
+                  {formatWon(payment.amount)}원을 {payment.method}로 {formatDateTime(payment.approved_at)}에 결제했습니다.
+                </p>
+              )}
+              {lastBooking && (
+                <p className={payment ? "mt-1" : ""}>
+                  {lastBooking.status === "confirmed"
+                    ? `예약이 확정됐습니다${lastBooking.confirmation ? ` (확인번호: ${lastBooking.confirmation})` : ""}`
+                    : "예약에 실패했습니다. 다시 시도해 주세요."}
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}
