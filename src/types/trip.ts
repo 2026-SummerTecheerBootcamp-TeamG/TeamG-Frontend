@@ -174,6 +174,8 @@ export interface PlanDay {
 }
 
 export interface PlanBooking {
+  /** hotel(숙소, LiteAPI 샌드박스) / flight(항공, 자체 mock 발권). 구응답 호환 위해 optional */
+  kind?: "hotel" | "flight";
   status: "confirmed" | "failed";
   booking_id: string | null;
   confirmation: string | null;

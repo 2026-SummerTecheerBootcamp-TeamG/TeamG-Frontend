@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import RouteMap from "./RouteMap";
 import type { ParsedFields, PlanDetail, PlanStatus } from "@/types/trip";
 import { preparePayment } from "@/api/payments";
+import { getRun, ticketFlight } from "@/api/trips";
 import { getApiErrorMessage } from "@/lib/api";
 import { loadTossPayments } from "@/lib/tossPayments";
 import { formatWon } from "../lib/parseRequest";
@@ -72,8 +73,12 @@ function renderBoldText(text: string) {
 
 export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
   const { allocation: al, flight, hotel, days, payment, bookings } = plan;
-  /** 재시도 이력까지 시간순으로 들어있으니 마지막(최근) 건 기준으로 표시 */
-  const lastBooking = bookings.length > 0 ? bookings[bookings.length - 1] : null;
+  /** 재시도 이력까지 시간순으로 들어있으니 종류별 마지막(최근) 건 기준으로 표시
+      kind가 없는 옛 데이터는 전부 숙소 예약이므로 "flight가 아닌 것" = 숙소 */
+  const hotelBookings = bookings.filter((b) => b.kind !== "flight");
+  const lastBooking = hotelBookings.length > 0 ? hotelBookings[hotelBookings.length - 1] : null;
+  const flightBookings = bookings.filter((b) => b.kind === "flight");
+  const lastTicket = flightBookings.length > 0 ? flightBookings[flightBookings.length - 1] : null;
 
   const confirmed = status === "confirmed";
 
@@ -140,6 +145,44 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
     } catch (e) {
       setPayError(getApiErrorMessage(e));
       setIsPaying(false);
+    }
+  };
+
+  /** 항공 발권 (자체 mock 공급자): 접수 -> 에이전트가 운임확인→좌석점유→발권 -> PNR */
+  const [ticket, setTicket] = useState<{ pnr: string } | null>(null);
+  const [isTicketing, setIsTicketing] = useState(false);
+  const [ticketError, setTicketError] = useState<string | null>(null);
+  /** 화면에 보여줄 PNR — 방금 발권한 것(ticket) 또는 저장된 발권 이력(lastTicket) */
+  const issuedPnr =
+    ticket?.pnr ?? (lastTicket?.status === "confirmed" ? lastTicket.booking_id : null);
+
+  const handleTicket = async () => {
+    setIsTicketing(true);
+    setTicketError(null);
+    try {
+      const accepted = await ticketFlight(plan.plan_id);
+      // 발권은 워커의 에이전트가 수행 — 완료될 때까지 폴링 (결제창과 달리 페이지 이동 없음)
+      const started = Date.now();
+      while (Date.now() - started < 90_000) {
+        const run = await getRun(accepted.run_id);
+        if (run.status === "completed") {
+          const r = run.result as { pnr?: string | null } | null;
+          if (r?.pnr) {
+            setTicket({ pnr: r.pnr });
+            return;
+          }
+          throw new Error("발권에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        }
+        if (run.status === "failed") {
+          throw new Error("발권에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+      }
+      throw new Error("발권이 시간 초과되었습니다. 다시 시도해 주세요.");
+    } catch (e) {
+      setTicketError(e instanceof Error ? e.message : getApiErrorMessage(e));
+    } finally {
+      setIsTicketing(false);
     }
   };
 
@@ -416,15 +459,18 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                   <span className="whitespace-nowrap text-[13.5px] font-bold">
                     {formatWon(budgetAl ? budgetAl.breakdown.flight_krw : flight.price_krw)}원
                   </span>
-                  {flight.booking_url && (
-                    <a
-                      href={flight.booking_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="whitespace-nowrap rounded-field border-[1.5px] border-cobalt px-3.5 py-1.5 text-[12px] font-bold text-cobalt transition-colors hover:bg-cobalt-soft"
+                  {issuedPnr ? (
+                    <span className="whitespace-nowrap rounded-field bg-teal/10 px-3 py-1.5 text-[11.5px] font-bold text-teal">
+                      ✓ 발권 완료
+                    </span>
+                  ) : (
+                    <button
+                      onClick={handleTicket}
+                      disabled={isTicketing}
+                      className="whitespace-nowrap rounded-field bg-cobalt px-3.5 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-[#1c36c4] disabled:opacity-60"
                     >
-                      예매하기 →
-                    </a>
+                      {isTicketing ? "발권 중..." : "발권하기"}
+                    </button>
                   )}
                 </div>
 
@@ -442,8 +488,34 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                     )}
                     {flight.utility !== null && <p>만족도 점수: {flight.utility}</p>}
                     <p className="mt-1 text-ink-3">
-                      항공권은 예매 페이지로 이동해 발권합니다 (항공 발권은 외부 예매처에서 진행).
+                      발권은 자체 mock 공급자로 진행되는 시뮬레이션입니다 (실제 결제
+                      없음). 운임 재확인 → 좌석 점유 → 발권 순서로 에이전트가
+                      수행하고 PNR(예약번호)을 발급받아요.
                     </p>
+                    {flight.booking_url && (
+                      <a
+                        href={flight.booking_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1.5 inline-flex text-[12px] font-semibold text-cobalt hover:underline"
+                      >
+                        실제 예매처에서 직접 예매하기 →
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {(issuedPnr || ticketError) && (
+                  <div className="mt-3 rounded-lg bg-teal/5 px-3.5 py-2.5 text-[12.5px] leading-relaxed">
+                    {issuedPnr && (
+                      <p className="font-semibold text-teal">
+                        ✓ 발권 완료 · PNR {issuedPnr}
+                        <span className="ml-1.5 font-normal text-ink-3">
+                          (mock 공급자 시뮬레이션 — 실제 결제 없음)
+                        </span>
+                      </p>
+                    )}
+                    {ticketError && <p className="font-semibold text-stamp">{ticketError}</p>}
                   </div>
                 )}
               </div>
