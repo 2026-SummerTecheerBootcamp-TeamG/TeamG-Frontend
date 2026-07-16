@@ -43,13 +43,20 @@ export default function Header() {
             {isLoggedIn ? "로그아웃" : "로그인"}
           </button>
 
-          {/* 로그인 전에는 마이페이지를 노출하지 않는다 */}
-          {isLoggedIn && (
+          {/* 로그인 전에는 회원가입을, 로그인 후에는 마이페이지를 보여준다 */}
+          {isLoggedIn ? (
             <Link
               to="/mypage"
               className="rounded-lg bg-ink px-3.5 py-2 text-[14.5px] font-semibold text-white transition-colors hover:bg-[#2a3138]"
             >
               마이페이지
+            </Link>
+          ) : (
+            <Link
+              to="/signup"
+              className="rounded-lg bg-ink px-3.5 py-2 text-[14.5px] font-semibold text-white transition-colors hover:bg-[#2a3138]"
+            >
+              회원가입
             </Link>
           )}
         </div>
