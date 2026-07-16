@@ -55,7 +55,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     fetchProfile()
       .then((profile) => setUser(toUser(profile)))
-      .catch(() => tokenStorage.clear()) // 토큰 만료/무효 → 로그아웃 상태로
+      .catch(() => {
+        // 토큰 만료/무효 → 토큰과 user를 모두 비워 확실히 로그아웃 상태로 만든다
+        tokenStorage.clear();
+        setUser(null);
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
