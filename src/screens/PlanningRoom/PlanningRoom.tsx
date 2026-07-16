@@ -88,9 +88,9 @@ export default function PlanningRoom() {
       <section
         className="relative pb-5 pt-10 md:pt-14"
         style={{
-          backgroundImage: "url('/ex6.jpg')",
+          backgroundImage: "url('/ex9.jpg')",
           backgroundSize: "cover",
-          backgroundPosition: "center 90%",
+          backgroundPosition: "center 67%",
         }}
       >
         <div className="absolute inset-0 bg-white/0" />
