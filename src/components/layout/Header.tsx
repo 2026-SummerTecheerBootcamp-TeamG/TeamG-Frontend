@@ -36,6 +36,14 @@ export default function Header() {
         </Link>
 
         <div className="flex items-center gap-1.5">
+          {/* 명시적인 "홈" 메뉴 — 로고 클릭만으로는 홈 이동이 비직관적이라는 피드백 반영 */}
+          <Link
+            to="/"
+            className="rounded-lg px-3.5 py-2 text-[14.5px] font-semibold text-ink-2 transition-colors hover:bg-line-soft hover:text-ink"
+          >
+            홈
+          </Link>
+
           <button
             onClick={handleAuth}
             className="rounded-lg px-3.5 py-2 text-[14.5px] font-semibold text-ink-2 transition-colors hover:bg-line-soft hover:text-ink"
