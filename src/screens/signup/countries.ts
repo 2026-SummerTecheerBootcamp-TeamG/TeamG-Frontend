@@ -1,0 +1,251 @@
+/**
+ * 국가 코드(ISO 3166-1 alpha-2) 기준 국적/공항 데이터
+ * 국적을 선택하면 해당 국가의 주요 국제공항 목록이 "기본 출발지" 선택지로 표시됩니다.
+ * airports 가 비어있는 초소형 국가는 UI에서 "선택 가능한 공항 없음"으로 처리합니다.
+ */
+
+export interface Airport {
+  city: string;
+  iata: string;
+}
+
+export interface Country {
+  code: string;
+  name: string;
+  airports: Airport[];
+}
+
+export const COUNTRIES: Country[] = [
+  // ── 동아시아 ──────────────────────────────
+  { code: "KR", name: "대한민국", airports: [
+    { city: "서울", iata: "GMP" }, { city: "인천", iata: "ICN" }, { city: "부산", iata: "PUS" },
+    { city: "제주", iata: "CJU" }, { city: "대구", iata: "TAE" },
+  ]},
+  { code: "JP", name: "일본", airports: [
+    { city: "도쿄(나리타)", iata: "NRT" }, { city: "도쿄(하네다)", iata: "HND" },
+    { city: "오사카", iata: "KIX" }, { city: "삿포로", iata: "CTS" }, { city: "후쿠오카", iata: "FUK" },
+  ]},
+  { code: "CN", name: "중국", airports: [
+    { city: "베이징", iata: "PEK" }, { city: "상하이", iata: "PVG" },
+    { city: "광저우", iata: "CAN" }, { city: "청두", iata: "CTU" },
+  ]},
+  { code: "TW", name: "대만", airports: [{ city: "타이베이", iata: "TPE" }, { city: "가오슝", iata: "KHH" }]},
+  { code: "HK", name: "홍콩", airports: [{ city: "홍콩", iata: "HKG" }]},
+  { code: "MO", name: "마카오", airports: [{ city: "마카오", iata: "MFM" }]},
+  { code: "MN", name: "몽골", airports: [{ city: "울란바토르", iata: "UBN" }]},
+  { code: "KP", name: "북한", airports: [{ city: "평양", iata: "FNJ" }]},
+
+  // ── 동남아시아 ──────────────────────────────
+  { code: "VN", name: "베트남", airports: [
+    { city: "하노이", iata: "HAN" }, { city: "호치민", iata: "SGN" }, { city: "다낭", iata: "DAD" },
+  ]},
+  { code: "TH", name: "태국", airports: [
+    { city: "방콕", iata: "BKK" }, { city: "푸켓", iata: "HKT" }, { city: "치앙마이", iata: "CNX" },
+  ]},
+  { code: "PH", name: "필리핀", airports: [{ city: "마닐라", iata: "MNL" }, { city: "세부", iata: "CEB" }]},
+  { code: "MY", name: "말레이시아", airports: [{ city: "쿠알라룸푸르", iata: "KUL" }, { city: "코타키나발루", iata: "BKI" }]},
+  { code: "SG", name: "싱가포르", airports: [{ city: "싱가포르", iata: "SIN" }]},
+  { code: "ID", name: "인도네시아", airports: [{ city: "자카르타", iata: "CGK" }, { city: "발리", iata: "DPS" }]},
+  { code: "KH", name: "캄보디아", airports: [{ city: "프놈펜", iata: "PNH" }, { city: "시엠립", iata: "SAI" }]},
+  { code: "LA", name: "라오스", airports: [{ city: "비엔티안", iata: "VTE" }]},
+  { code: "MM", name: "미얀마", airports: [{ city: "양곤", iata: "RGN" }]},
+  { code: "BN", name: "브루나이", airports: [{ city: "반다르스리브가완", iata: "BWN" }]},
+  { code: "TL", name: "동티모르", airports: [{ city: "딜리", iata: "DIL" }]},
+
+  // ── 남아시아 ──────────────────────────────
+  { code: "IN", name: "인도", airports: [{ city: "델리", iata: "DEL" }, { city: "뭄바이", iata: "BOM" }, { city: "벵갈루루", iata: "BLR" }]},
+  { code: "PK", name: "파키스탄", airports: [{ city: "카라치", iata: "KHI" }, { city: "이슬라마바드", iata: "ISB" }]},
+  { code: "BD", name: "방글라데시", airports: [{ city: "다카", iata: "DAC" }]},
+  { code: "LK", name: "스리랑카", airports: [{ city: "콜롬보", iata: "CMB" }]},
+  { code: "NP", name: "네팔", airports: [{ city: "카트만두", iata: "KTM" }]},
+  { code: "BT", name: "부탄", airports: [{ city: "파로", iata: "PBH" }]},
+  { code: "MV", name: "몰디브", airports: [{ city: "말레", iata: "MLE" }]},
+  { code: "AF", name: "아프가니스탄", airports: [{ city: "카불", iata: "KBL" }]},
+
+  // ── 중앙아시아 ──────────────────────────────
+  { code: "KZ", name: "카자흐스탄", airports: [{ city: "알마티", iata: "ALA" }, { city: "아스타나", iata: "NQZ" }]},
+  { code: "UZ", name: "우즈베키스탄", airports: [{ city: "타슈켄트", iata: "TAS" }]},
+  { code: "TM", name: "투르크메니스탄", airports: [{ city: "아시가바트", iata: "ASB" }]},
+  { code: "KG", name: "키르기스스탄", airports: [{ city: "비슈케크", iata: "FRU" }]},
+  { code: "TJ", name: "타지키스탄", airports: [{ city: "두샨베", iata: "DYU" }]},
+
+  // ── 중동 ──────────────────────────────
+  { code: "AE", name: "아랍에미리트", airports: [{ city: "두바이", iata: "DXB" }, { city: "아부다비", iata: "AUH" }]},
+  { code: "SA", name: "사우디아라비아", airports: [{ city: "리야드", iata: "RUH" }, { city: "제다", iata: "JED" }]},
+  { code: "QA", name: "카타르", airports: [{ city: "도하", iata: "DOH" }]},
+  { code: "KW", name: "쿠웨이트", airports: [{ city: "쿠웨이트시티", iata: "KWI" }]},
+  { code: "BH", name: "바레인", airports: [{ city: "마나마", iata: "BAH" }]},
+  { code: "OM", name: "오만", airports: [{ city: "무스카트", iata: "MCT" }]},
+  { code: "YE", name: "예멘", airports: [{ city: "사나", iata: "SAH" }]},
+  { code: "IQ", name: "이라크", airports: [{ city: "바그다드", iata: "BGW" }]},
+  { code: "IR", name: "이란", airports: [{ city: "테헤란", iata: "IKA" }]},
+  { code: "IL", name: "이스라엘", airports: [{ city: "텔아비브", iata: "TLV" }]},
+  { code: "JO", name: "요르단", airports: [{ city: "암만", iata: "AMM" }]},
+  { code: "LB", name: "레바논", airports: [{ city: "베이루트", iata: "BEY" }]},
+  { code: "SY", name: "시리아", airports: [{ city: "다마스쿠스", iata: "DAM" }]},
+  { code: "TR", name: "튀르키예", airports: [{ city: "이스탄불", iata: "IST" }, { city: "앙카라", iata: "ESB" }]},
+  { code: "PS", name: "팔레스타인", airports: []},
+  { code: "AZ", name: "아제르바이잔", airports: [{ city: "바쿠", iata: "GYD" }]},
+  { code: "AM", name: "아르메니아", airports: [{ city: "예레반", iata: "EVN" }]},
+  { code: "GE", name: "조지아", airports: [{ city: "트빌리시", iata: "TBS" }]},
+  { code: "CY", name: "키프로스", airports: [{ city: "라르나카", iata: "LCA" }]},
+
+  // ── 유럽 ──────────────────────────────
+  { code: "GB", name: "영국", airports: [{ city: "런던(히스로)", iata: "LHR" }, { city: "맨체스터", iata: "MAN" }]},
+  { code: "FR", name: "프랑스", airports: [{ city: "파리(샤를드골)", iata: "CDG" }, { city: "니스", iata: "NCE" }]},
+  { code: "DE", name: "독일", airports: [{ city: "프랑크푸르트", iata: "FRA" }, { city: "뮌헨", iata: "MUC" }, { city: "베를린", iata: "BER" }]},
+  { code: "IT", name: "이탈리아", airports: [{ city: "로마", iata: "FCO" }, { city: "밀라노", iata: "MXP" }]},
+  { code: "ES", name: "스페인", airports: [{ city: "마드리드", iata: "MAD" }, { city: "바르셀로나", iata: "BCN" }]},
+  { code: "PT", name: "포르투갈", airports: [{ city: "리스본", iata: "LIS" }]},
+  { code: "NL", name: "네덜란드", airports: [{ city: "암스테르담", iata: "AMS" }]},
+  { code: "BE", name: "벨기에", airports: [{ city: "브뤼셀", iata: "BRU" }]},
+  { code: "CH", name: "스위스", airports: [{ city: "취리히", iata: "ZRH" }, { city: "제네바", iata: "GVA" }]},
+  { code: "AT", name: "오스트리아", airports: [{ city: "빈", iata: "VIE" }]},
+  { code: "IE", name: "아일랜드", airports: [{ city: "더블린", iata: "DUB" }]},
+  { code: "SE", name: "스웨덴", airports: [{ city: "스톡홀름", iata: "ARN" }]},
+  { code: "NO", name: "노르웨이", airports: [{ city: "오슬로", iata: "OSL" }]},
+  { code: "DK", name: "덴마크", airports: [{ city: "코펜하겐", iata: "CPH" }]},
+  { code: "FI", name: "핀란드", airports: [{ city: "헬싱키", iata: "HEL" }]},
+  { code: "IS", name: "아이슬란드", airports: [{ city: "레이캬비크", iata: "KEF" }]},
+  { code: "PL", name: "폴란드", airports: [{ city: "바르샤바", iata: "WAW" }]},
+  { code: "CZ", name: "체코", airports: [{ city: "프라하", iata: "PRG" }]},
+  { code: "SK", name: "슬로바키아", airports: [{ city: "브라티슬라바", iata: "BTS" }]},
+  { code: "HU", name: "헝가리", airports: [{ city: "부다페스트", iata: "BUD" }]},
+  { code: "RO", name: "루마니아", airports: [{ city: "부쿠레슈티", iata: "OTP" }]},
+  { code: "BG", name: "불가리아", airports: [{ city: "소피아", iata: "SOF" }]},
+  { code: "GR", name: "그리스", airports: [{ city: "아테네", iata: "ATH" }]},
+  { code: "HR", name: "크로아티아", airports: [{ city: "자그레브", iata: "ZAG" }]},
+  { code: "RS", name: "세르비아", airports: [{ city: "베오그라드", iata: "BEG" }]},
+  { code: "SI", name: "슬로베니아", airports: [{ city: "류블랴나", iata: "LJU" }]},
+  { code: "BA", name: "보스니아헤르체고비나", airports: [{ city: "사라예보", iata: "SJJ" }]},
+  { code: "AL", name: "알바니아", airports: [{ city: "티라나", iata: "TIA" }]},
+  { code: "MK", name: "북마케도니아", airports: [{ city: "스코페", iata: "SKP" }]},
+  { code: "ME", name: "몬테네그로", airports: [{ city: "포드고리차", iata: "TGD" }]},
+  { code: "XK", name: "코소보", airports: [{ city: "프리슈티나", iata: "PRN" }]},
+  { code: "UA", name: "우크라이나", airports: [{ city: "키이우", iata: "KBP" }]},
+  { code: "BY", name: "벨라루스", airports: [{ city: "민스크", iata: "MSQ" }]},
+  { code: "MD", name: "몰도바", airports: [{ city: "키시너우", iata: "KIV" }]},
+  { code: "RU", name: "러시아", airports: [{ city: "모스크바", iata: "SVO" }, { city: "상트페테르부르크", iata: "LED" }]},
+  { code: "LT", name: "리투아니아", airports: [{ city: "빌뉴스", iata: "VNO" }]},
+  { code: "LV", name: "라트비아", airports: [{ city: "리가", iata: "RIX" }]},
+  { code: "EE", name: "에스토니아", airports: [{ city: "탈린", iata: "TLL" }]},
+  { code: "LU", name: "룩셈부르크", airports: [{ city: "룩셈부르크", iata: "LUX" }]},
+  { code: "MT", name: "몰타", airports: [{ city: "몰타", iata: "MLA" }]},
+  { code: "AD", name: "안도라", airports: []},
+  { code: "MC", name: "모나코", airports: []},
+  { code: "SM", name: "산마리노", airports: []},
+  { code: "LI", name: "리히텐슈타인", airports: []},
+  { code: "VA", name: "바티칸", airports: []},
+
+  // ── 오세아니아 ──────────────────────────────
+  { code: "AU", name: "호주", airports: [{ city: "시드니", iata: "SYD" }, { city: "멜버른", iata: "MEL" }, { city: "브리즈번", iata: "BNE" }]},
+  { code: "NZ", name: "뉴질랜드", airports: [{ city: "오클랜드", iata: "AKL" }, { city: "크라이스트처치", iata: "CHC" }]},
+  { code: "FJ", name: "피지", airports: [{ city: "난디", iata: "NAN" }]},
+  { code: "PG", name: "파푸아뉴기니", airports: [{ city: "포트모르즈비", iata: "POM" }]},
+  { code: "WS", name: "사모아", airports: [{ city: "아피아", iata: "APW" }]},
+  { code: "TO", name: "통가", airports: [{ city: "누쿠알로파", iata: "TBU" }]},
+  { code: "VU", name: "바누아투", airports: [{ city: "포트빌라", iata: "VLI" }]},
+  { code: "SB", name: "솔로몬제도", airports: [{ city: "호니아라", iata: "HIR" }]},
+  { code: "PW", name: "팔라우", airports: [{ city: "코로르", iata: "ROR" }]},
+  { code: "MH", name: "마셜제도", airports: [{ city: "마주로", iata: "MAJ" }]},
+  { code: "FM", name: "미크로네시아", airports: [{ city: "폰페이", iata: "PNI" }]},
+  { code: "KI", name: "키리바시", airports: [{ city: "타라와", iata: "TRW" }]},
+  { code: "NR", name: "나우루", airports: [{ city: "야렌", iata: "INU" }]},
+  { code: "TV", name: "투발루", airports: [{ city: "푸나푸티", iata: "FUN" }]},
+
+  // ── 북미 ──────────────────────────────
+  { code: "US", name: "미국", airports: [
+    { city: "뉴욕", iata: "JFK" }, { city: "로스앤젤레스", iata: "LAX" },
+    { city: "시카고", iata: "ORD" }, { city: "샌프란시스코", iata: "SFO" }, { city: "하와이", iata: "HNL" },
+  ]},
+  { code: "CA", name: "캐나다", airports: [{ city: "토론토", iata: "YYZ" }, { city: "밴쿠버", iata: "YVR" }, { city: "몬트리올", iata: "YUL" }]},
+  { code: "MX", name: "멕시코", airports: [{ city: "멕시코시티", iata: "MEX" }, { city: "칸쿤", iata: "CUN" }]},
+
+  // ── 중미·카리브 ──────────────────────────────
+  { code: "GT", name: "과테말라", airports: [{ city: "과테말라시티", iata: "GUA" }]},
+  { code: "BZ", name: "벨리즈", airports: [{ city: "벨리즈시티", iata: "BZE" }]},
+  { code: "HN", name: "온두라스", airports: [{ city: "테구시갈파", iata: "TGU" }]},
+  { code: "SV", name: "엘살바도르", airports: [{ city: "산살바도르", iata: "SAL" }]},
+  { code: "NI", name: "니카라과", airports: [{ city: "마나과", iata: "MGA" }]},
+  { code: "CR", name: "코스타리카", airports: [{ city: "산호세", iata: "SJO" }]},
+  { code: "PA", name: "파나마", airports: [{ city: "파나마시티", iata: "PTY" }]},
+  { code: "CU", name: "쿠바", airports: [{ city: "아바나", iata: "HAV" }]},
+  { code: "JM", name: "자메이카", airports: [{ city: "킹스턴", iata: "KIN" }]},
+  { code: "HT", name: "아이티", airports: [{ city: "포르토프랭스", iata: "PAP" }]},
+  { code: "DO", name: "도미니카공화국", airports: [{ city: "산토도밍고", iata: "SDQ" }]},
+  { code: "BS", name: "바하마", airports: [{ city: "나소", iata: "NAS" }]},
+  { code: "TT", name: "트리니다드토바고", airports: [{ city: "포트오브스페인", iata: "POS" }]},
+  { code: "BB", name: "바베이도스", airports: [{ city: "브리지타운", iata: "BGI" }]},
+
+  // ── 남미 ──────────────────────────────
+  { code: "BR", name: "브라질", airports: [{ city: "상파울루", iata: "GRU" }, { city: "리우데자네이루", iata: "GIG" }]},
+  { code: "AR", name: "아르헨티나", airports: [{ city: "부에노스아이레스", iata: "EZE" }]},
+  { code: "CL", name: "칠레", airports: [{ city: "산티아고", iata: "SCL" }]},
+  { code: "PE", name: "페루", airports: [{ city: "리마", iata: "LIM" }]},
+  { code: "CO", name: "콜롬비아", airports: [{ city: "보고타", iata: "BOG" }]},
+  { code: "VE", name: "베네수엘라", airports: [{ city: "카라카스", iata: "CCS" }]},
+  { code: "EC", name: "에콰도르", airports: [{ city: "키토", iata: "UIO" }]},
+  { code: "BO", name: "볼리비아", airports: [{ city: "라파스", iata: "LPB" }]},
+  { code: "PY", name: "파라과이", airports: [{ city: "아순시온", iata: "ASU" }]},
+  { code: "UY", name: "우루과이", airports: [{ city: "몬테비데오", iata: "MVD" }]},
+  { code: "GY", name: "가이아나", airports: [{ city: "조지타운", iata: "GEO" }]},
+  { code: "SR", name: "수리남", airports: [{ city: "파라마리보", iata: "PBM" }]},
+
+  // ── 아프리카 ──────────────────────────────
+  { code: "EG", name: "이집트", airports: [{ city: "카이로", iata: "CAI" }]},
+  { code: "LY", name: "리비아", airports: [{ city: "트리폴리", iata: "TIP" }]},
+  { code: "TN", name: "튀니지", airports: [{ city: "튀니스", iata: "TUN" }]},
+  { code: "DZ", name: "알제리", airports: [{ city: "알제", iata: "ALG" }]},
+  { code: "MA", name: "모로코", airports: [{ city: "카사블랑카", iata: "CMN" }]},
+  { code: "SD", name: "수단", airports: [{ city: "하르툼", iata: "KRT" }]},
+  { code: "SS", name: "남수단", airports: [{ city: "주바", iata: "JUB" }]},
+  { code: "ET", name: "에티오피아", airports: [{ city: "아디스아바바", iata: "ADD" }]},
+  { code: "ER", name: "에리트레아", airports: [{ city: "아스마라", iata: "ASM" }]},
+  { code: "DJ", name: "지부티", airports: [{ city: "지부티", iata: "JIB" }]},
+  { code: "SO", name: "소말리아", airports: [{ city: "모가디슈", iata: "MGQ" }]},
+  { code: "KE", name: "케냐", airports: [{ city: "나이로비", iata: "NBO" }]},
+  { code: "UG", name: "우간다", airports: [{ city: "엔테베", iata: "EBB" }]},
+  { code: "TZ", name: "탄자니아", airports: [{ city: "다르에스살람", iata: "DAR" }]},
+  { code: "RW", name: "르완다", airports: [{ city: "키갈리", iata: "KGL" }]},
+  { code: "BI", name: "부룬디", airports: [{ city: "부줌부라", iata: "BJM" }]},
+  { code: "CD", name: "콩고민주공화국", airports: [{ city: "킨샤사", iata: "FIH" }]},
+  { code: "CG", name: "콩고공화국", airports: [{ city: "브라자빌", iata: "BZV" }]},
+  { code: "GA", name: "가봉", airports: [{ city: "리브르빌", iata: "LBV" }]},
+  { code: "GQ", name: "적도기니", airports: [{ city: "말라보", iata: "SSG" }]},
+  { code: "CM", name: "카메룬", airports: [{ city: "두알라", iata: "DLA" }]},
+  { code: "CF", name: "중앙아프리카공화국", airports: [{ city: "방기", iata: "BGF" }]},
+  { code: "TD", name: "차드", airports: [{ city: "은자메나", iata: "NDJ" }]},
+  { code: "NE", name: "니제르", airports: [{ city: "니아메", iata: "NIM" }]},
+  { code: "NG", name: "나이지리아", airports: [{ city: "라고스", iata: "LOS" }]},
+  { code: "BJ", name: "베냉", airports: [{ city: "코토누", iata: "COO" }]},
+  { code: "TG", name: "토고", airports: [{ city: "로메", iata: "LFW" }]},
+  { code: "GH", name: "가나", airports: [{ city: "아크라", iata: "ACC" }]},
+  { code: "CI", name: "코트디부아르", airports: [{ city: "아비장", iata: "ABJ" }]},
+  { code: "LR", name: "라이베리아", airports: [{ city: "몬로비아", iata: "ROB" }]},
+  { code: "SL", name: "시에라리온", airports: [{ city: "프리타운", iata: "FNA" }]},
+  { code: "GN", name: "기니", airports: [{ city: "코나크리", iata: "CKY" }]},
+  { code: "GW", name: "기니비사우", airports: [{ city: "비사우", iata: "OXB" }]},
+  { code: "SN", name: "세네갈", airports: [{ city: "다카르", iata: "DSS" }]},
+  { code: "GM", name: "감비아", airports: [{ city: "반줄", iata: "BJL" }]},
+  { code: "ML", name: "말리", airports: [{ city: "바마코", iata: "BKO" }]},
+  { code: "BF", name: "부르키나파소", airports: [{ city: "와가두구", iata: "OUA" }]},
+  { code: "MR", name: "모리타니", airports: [{ city: "누악쇼트", iata: "NKC" }]},
+  { code: "CV", name: "카보베르데", airports: [{ city: "프라이아", iata: "RAI" }]},
+  { code: "ZA", name: "남아프리카공화국", airports: [{ city: "요하네스버그", iata: "JNB" }, { city: "케이프타운", iata: "CPT" }]},
+  { code: "NA", name: "나미비아", airports: [{ city: "빈트후크", iata: "WDH" }]},
+  { code: "BW", name: "보츠와나", airports: [{ city: "가보로네", iata: "GBE" }]},
+  { code: "ZW", name: "짐바브웨", airports: [{ city: "하라레", iata: "HRE" }]},
+  { code: "ZM", name: "잠비아", airports: [{ city: "루사카", iata: "LUN" }]},
+  { code: "MW", name: "말라위", airports: [{ city: "릴롱궤", iata: "LLW" }]},
+  { code: "MZ", name: "모잠비크", airports: [{ city: "마푸투", iata: "MPM" }]},
+  { code: "MG", name: "마다가스카르", airports: [{ city: "안타나나리보", iata: "TNR" }]},
+  { code: "MU", name: "모리셔스", airports: [{ city: "포트루이스", iata: "MRU" }]},
+  { code: "SC", name: "세이셸", airports: [{ city: "마에", iata: "SEZ" }]},
+  { code: "KM", name: "코모로", airports: [{ city: "모로니", iata: "HAH" }]},
+  { code: "LS", name: "레소토", airports: [{ city: "마세루", iata: "MSU" }]},
+  { code: "SZ", name: "에스와티니", airports: [{ city: "마초조", iata: "SHO" }]},
+  { code: "AO", name: "앙골라", airports: [{ city: "루안다", iata: "LAD" }]},
+];
+
+export const findCountry = (code: string): Country | undefined =>
+  COUNTRIES.find((c) => c.code === code);
