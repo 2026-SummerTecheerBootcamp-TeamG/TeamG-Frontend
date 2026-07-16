@@ -198,6 +198,10 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
   /** 예산 중 안 쓴 만큼 (fit일 때만) */
   const remaining =
     budgetAl?.status === "fit" ? Math.max(0, budgetAl.total_budget - budgetAl.total_cost) : 0;
+  /** 예산 초과분 — 서버의 shortfall 대신 여기서 "총예산 대비"로 직접 계산.
+      이유: 예비비(5%) 제거 이전에 만들어진 계획의 저장 스냅샷에는 예비비를 뺀
+      금액 기준의 shortfall이 남아 있어서, 그대로 쓰면 직관과 어긋난다 */
+  const overBudget = budgetAl ? Math.max(0, budgetAl.total_cost - budgetAl.total_budget) : 0;
   /** 예산 바에서 각 항목이 차지하는 비율 */
   const ratio = (value: number, denom: number) =>
     Math.max(2, Math.round((value / Math.max(denom, 1)) * 100));
@@ -285,18 +289,14 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
 
             {budgetAl.status === "insufficient" && (
               <p className="mb-3 rounded-field border border-stamp/30 bg-stamp/5 px-3 py-2 text-[12.5px] font-semibold text-stamp">
-                예산을 {formatWon(budgetAl.shortfall)}원 초과했어요. 아래는 가장
-                저렴한 조합 기준이에요 — 예산을 늘리거나, 왼쪽 채팅으로 날짜·조건을
-                바꿔보세요.
+                총예산 {formatWon(budgetAl.total_budget)}원보다 {formatWon(overBudget)}원
+                초과했어요. 아래는 가장 저렴한 조합 기준이에요 — 예산을 늘리거나,
+                왼쪽 채팅으로 날짜·조건을 바꿔보세요.
               </p>
             )}
 
-            {budgetAl.reserve > 0 && (
-              <p className="mb-3 text-[11.5px] text-ink-3">
-                예비비 {formatWon(budgetAl.reserve)}원(5%)을 제외하면{" "}
-                {formatWon(budgetAl.spendable)}원까지 사용할 수 있어요.
-              </p>
-            )}
+            {/* 예비비 개념 폐지 — 총예산 전액이 곧 사용 가능 예산.
+                (옛 계획 스냅샷에 reserve 값이 남아 있어도 이제 표시하지 않는다) */}
 
             <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-md bg-[#edf0f3]">
               <span
@@ -339,7 +339,7 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                 </span>
               ) : (
                 <span className="ml-auto text-[12.5px] font-semibold text-stamp">
-                  {formatWon(budgetAl.shortfall)}원 부족
+                  총예산 대비 {formatWon(overBudget)}원 부족
                 </span>
               )}
             </div>

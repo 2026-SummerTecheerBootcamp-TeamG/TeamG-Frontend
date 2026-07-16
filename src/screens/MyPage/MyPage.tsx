@@ -50,9 +50,18 @@ export default function MyPage() {
         <TripDetail planId={selectedPlanId} onBack={backToList} />
       ) : (
         <>
-          <h1 className="mb-6 text-[clamp(26px,3.4vw,38px)] font-extrabold tracking-[-0.045em]">
-            마이페이지
-          </h1>
+          <div className="mb-6 flex items-center gap-4">
+            <h1 className="text-[clamp(26px,3.4vw,38px)] font-extrabold tracking-[-0.045em]">
+              마이페이지
+            </h1>
+            {/* 홈으로 돌아가는 명시적 버튼 (헤더의 "홈" 메뉴 대신 이 자리로 — 피드백 반영) */}
+            <button
+              onClick={() => navigate("/")}
+              className="rounded-lg border border-line bg-white px-3 py-1.5 text-[13px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
+            >
+              ← 돌아가기
+            </button>
+          </div>
 
           <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
             <ProfileCard />
