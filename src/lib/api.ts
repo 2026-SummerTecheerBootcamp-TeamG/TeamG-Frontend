@@ -117,7 +117,8 @@ export const extractFieldErrors = (error: unknown): ApiFieldErrors => {
       return data as ApiFieldErrors;
     }
   }
-  return { detail: "알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해주세요." };
+  // 응답이 없으면 서버 연결 실패가 원인 — "알 수 없는 오류" 대신 원인을 알려준다
+  return { detail: "서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요." };
 };
 
 /** 특정 필드의 첫 번째 에러 메시지만 뽑아쓰는 헬퍼 (폼 에러 표시용) */
@@ -128,15 +129,40 @@ export const firstError = (errors: ApiFieldErrors, field: string): string | unde
 };
 
 /**
- * agents/trips/payments 계열 뷰는 필드 에러가 아니라 { "error": "..." } 하나만 내려준다.
- * 그 문자열만 뽑아쓰는 헬퍼 (챗/토스트 표시용).
+ * 에러 → 사용자가 "원인을 알 수 있는" 문장으로.
+ *
+ * 우선순위:
+ *  1. 백엔드가 준 구체적 메시지 ({error: "..."} 또는 DRF {detail: "..."})
+ *  2. 없으면 상태 코드/네트워크 상황별로 원인을 설명하는 기본 문구
+ * ("알 수 없는 오류" 같은 막연한 문구는 쓰지 않는다 — 피드백 반영)
  */
 export const getApiErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
+    // 1. 서버가 보낸 구체적 메시지가 있으면 그대로 (가장 정확한 원인)
     const data: unknown = error.response?.data;
-    if (data && typeof data === "object" && "error" in data && typeof (data as { error?: unknown }).error === "string") {
-      return (data as { error: string }).error;
+    if (data && typeof data === "object") {
+      const d = data as { error?: unknown; detail?: unknown };
+      if (typeof d.error === "string" && d.error) return d.error;
+      if (typeof d.detail === "string" && d.detail) return d.detail;
+      if (Array.isArray(d.detail) && typeof d.detail[0] === "string") return d.detail[0];
     }
+
+    // 2. 응답 자체가 없음 = 서버까지 도달 실패 (인터넷/서버 다운/타임아웃)
+    if (!error.response) {
+      if (error.code === "ECONNABORTED")
+        return "서버 응답이 너무 오래 걸려요. 잠시 후 다시 시도해 주세요.";
+      return "서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.";
+    }
+
+    // 3. 상태 코드별 원인 안내
+    const status = error.response.status;
+    if (status === 401) return "로그인이 만료됐어요. 다시 로그인해 주세요.";
+    if (status === 403) return "이 작업을 할 권한이 없어요. 본인 계정인지 확인해 주세요.";
+    if (status === 404) return "요청한 정보를 찾을 수 없어요. 삭제됐거나 주소가 잘못됐을 수 있어요.";
+    if (status === 409) return "이미 처리된 요청이에요. 화면을 새로고침해 확인해 주세요.";
+    if (status === 429) return "요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.";
+    if (status >= 500) return "서버에 문제가 생겼어요. 잠시 후 다시 시도해 주세요. 계속되면 팀에 알려주세요.";
+    return `요청이 거절됐어요 (오류 코드 ${status}). 입력값을 확인하고 다시 시도해 주세요.`;
   }
-  return "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+  return "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.";
 };
