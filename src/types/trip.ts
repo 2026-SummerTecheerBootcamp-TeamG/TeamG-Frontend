@@ -71,10 +71,19 @@ export interface LocalEditResult {
   dropped_names: string[];
 }
 
+/** 백엔드 trace 이벤트 한 건 (진행 상황 실시간 표시의 원천 데이터) */
+export interface TraceEvent {
+  t: number;                // 발생 시각 (unix)
+  kind: string;             // user/agent/api/llm/data/db/rule/done
+  actor: string;            // 누가 (claude, google, budget, orchestrator…)
+  action: string;           // 무엇을 (예: "예산 배분 완료")
+  detail?: string;
+}
+
 export interface RunDetailResponse {
   run_id: string;
   status: "running" | "completed" | "failed";
-  events: unknown[];
+  events: TraceEvent[];
   result: LocalEditResult | Record<string, unknown> | null;
 }
 
