@@ -29,7 +29,11 @@ export default function PaymentResult() {
     if (!orderId || !amount) return "결제 정보를 확인할 수 없습니다.";
     return "";
   });
-  const [booking, setBooking] = useState<BookingResult | null>(null);
+  /** 숙소 예약(run_booking) 또는 항공 발권(run_flight_ticketing)의 결과.
+      pnr 필드가 있으면 항공 발권 건이다 */
+  type PayFollowUp = BookingResult & { pnr?: string | null; ticket_status?: string };
+  const [booking, setBooking] = useState<PayFollowUp | null>(null);
+  const isFlight = booking != null && "pnr" in booking;
 
   // 결제 승인은 한 번만 실행한다 (StrictMode의 이중 마운트 및 재렌더로 인한 중복 호출 방지).
   const startedRef = useRef(false);
@@ -54,13 +58,13 @@ export default function PaymentResult() {
         while (Date.now() - started < POLL_TIMEOUT) {
           const run = await getRun(confirmed.run_id);
           if (run.status === "completed") {
-            setBooking(run.result as BookingResult | null);
+            setBooking(run.result as PayFollowUp | null);
             setPhase("done");
             return;
           }
           if (run.status === "failed") {
             setPhase("error");
-            setMessage("예약 처리에 실패했습니다. 마이페이지에서 다시 시도해 주세요.");
+            setMessage("예약/발권 처리에 실패했습니다. 마이페이지에서 다시 시도해 주세요.");
             return;
           }
           await sleep(POLL_INTERVAL);
@@ -84,7 +88,7 @@ export default function PaymentResult() {
         <>
           <span className="mb-5 h-8 w-8 animate-spin rounded-full border-[3px] border-line border-t-cobalt" />
           <h1 className="text-lg font-bold tracking-[-0.02em]">
-            {phase === "confirming" ? "결제를 확인하는 중입니다" : "숙소를 예약하는 중입니다"}
+            {phase === "confirming" ? "결제를 확인하는 중입니다" : "예약·발권을 진행하는 중입니다"}
           </h1>
           <p className="mt-2 text-sm text-ink-3">잠시만 기다려 주세요.</p>
         </>
@@ -96,12 +100,23 @@ export default function PaymentResult() {
             ✓
           </p>
           <h1 className="text-lg font-bold tracking-[-0.02em]">
-            {booking?.booking_status === "failed" ? "결제는 완료됐지만 예약에 실패했습니다" : "예약이 완료됐습니다"}
+            {isFlight
+              ? booking?.ticket_status === "failed"
+                ? "결제는 완료됐지만 발권에 실패했습니다"
+                : "항공권 발권이 완료됐습니다"
+              : booking?.booking_status === "failed"
+                ? "결제는 완료됐지만 예약에 실패했습니다"
+                : "예약이 완료됐습니다"}
           </h1>
+          {isFlight && booking?.pnr && (
+            <p className="mt-3 rounded-field bg-cobalt-soft px-4 py-2 font-mono text-[15px] font-bold text-cobalt">
+              PNR {booking.pnr}
+            </p>
+          )}
           {booking?.summary && (
             <p className="mt-3 break-keep text-sm text-ink-2">{booking.summary}</p>
           )}
-          {booking?.confirmation && (
+          {!isFlight && booking?.confirmation && (
             <p className="mt-2 text-xs text-ink-3">확인 코드 {booking.confirmation}</p>
           )}
           <Link

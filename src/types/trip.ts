@@ -130,6 +130,8 @@ export interface PlanFlight {
   price_krw: number;
   utility: number | null;
   booking_url: string | null;
+  /** 왕복 노선 "ICN → FUK" (요청의 출발/도착 공항 코드) */
+  route?: string | null;
   /** "YYYY-MM-DD HH:MM" (SerpApi 원본 형식, 가는 편 기준) */
   departure_time: string | null;
   arrival_time: string | null;
@@ -142,10 +144,14 @@ export interface PlanHotel {
   name: string;
   price_krw: number;
   utility: number | null;
+  /** 만족도 근거 목록 (성급/테마 가점 등) — 상세 정보 펼침용 */
+  utility_reasons?: string[] | null;
   booking_url: string | null;
   stars: number | null;
   latitude: number | null;
   longitude: number | null;
+  /** LiteAPI 스냅샷에 있으면 내려옴 (없으면 null) */
+  address?: string | null;
 }
 
 /** 구글 장소 enrichment 결과 - 형태가 느슨해서 필드 존재를 방어적으로 확인해야 함 */
@@ -201,7 +207,10 @@ export interface PlanDetail {
   flight: PlanFlight | null;
   hotel: PlanHotel | null;
   days: PlanDay[];
+  /** 숙소 결제 완료 건 (없으면 null) */
   payment: PlanPayment | null;
+  /** 항공 결제 완료 건 (없으면 null) — 결제 승인 시 mock 발권으로 이어짐 */
+  flight_payment?: PlanPayment | null;
   bookings: PlanBooking[];
   created_at: string;
 }

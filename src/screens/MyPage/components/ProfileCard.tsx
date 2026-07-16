@@ -3,6 +3,8 @@ import { useAuth } from "@/context/AuthContext";
 import { updateProfileRequest } from "@/api/auth";
 import { getApiErrorMessage } from "@/lib/api";
 import { nationLabel } from "../lib/options";
+// 회원가입과 같은 목록으로 국적/출발지를 "선택"하게 한다 (자유 입력 금지 — 오타 방지)
+import { COUNTRIES } from "@/screens/signup/countries";
 
 /** 마이페이지 프로필 카드 — 조회 + 수정 */
 export default function ProfileCard() {
@@ -18,6 +20,10 @@ export default function ProfileCard() {
 
   if (!user) return null;
 
+  /** 현재 국적의 공항 목록 (국적을 바꾸면 출발지 선택지도 바뀜 — 회원가입과 동일 규칙) */
+  const airports =
+    COUNTRIES.find((c) => c.code === form.nationality)?.airports ?? [];
+
   const startEdit = () => {
     // 현재 프로필 값으로 폼을 채우고 편집 시작
     setForm({
@@ -29,6 +35,17 @@ export default function ProfileCard() {
     });
     setError(null);
     setEditing(true);
+  };
+
+  /** 국적 변경: 출발지 선택지가 바뀌므로 그 나라 첫 공항으로 리셋 */
+  const changeNation = (code: string) => {
+    const first = COUNTRIES.find((c) => c.code === code)?.airports[0];
+    setForm({
+      ...form,
+      nationality: code,
+      city: first?.city ?? "",
+      iata: first?.iata ?? "",
+    });
   };
 
   const save = async () => {
@@ -103,30 +120,46 @@ export default function ProfileCard() {
               />
             </Row>
             <Row label="국적">
-              <input
+              <select
                 className={inputCls}
-                maxLength={2}
-                placeholder="KR"
                 value={form.nationality}
-                onChange={(e) => setForm({ ...form, nationality: e.target.value })}
-              />
+                onChange={(e) => changeNation(e.target.value)}
+              >
+                {/* 목록에 없는 기존 값도 보이게 (선택지 최상단에 유지) */}
+                {!COUNTRIES.some((c) => c.code === form.nationality) && (
+                  <option value={form.nationality}>{form.nationality}</option>
+                )}
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </Row>
             <Row label="기본 출발지">
-              <span className="flex gap-1.5">
-                <input
-                  className={inputCls}
-                  placeholder="서울"
-                  value={form.city}
-                  onChange={(e) => setForm({ ...form, city: e.target.value })}
-                />
-                <input
-                  className={`${inputCls} w-[74px] shrink-0`}
-                  maxLength={3}
-                  placeholder="ICN"
-                  value={form.iata}
-                  onChange={(e) => setForm({ ...form, iata: e.target.value })}
-                />
-              </span>
+              <select
+                className={inputCls}
+                value={form.iata}
+                onChange={(e) => {
+                  const airport = airports.find((a) => a.iata === e.target.value);
+                  if (airport) setForm({ ...form, city: airport.city, iata: airport.iata });
+                }}
+              >
+                {airports.length === 0 && (
+                  <option value={form.iata}>선택 가능한 공항 없음</option>
+                )}
+                {/* 현재 값이 이 나라 목록에 없으면(옛 데이터) 최상단에 유지 */}
+                {form.iata && !airports.some((a) => a.iata === form.iata) && (
+                  <option value={form.iata}>
+                    {form.city} ({form.iata})
+                  </option>
+                )}
+                {airports.map((a) => (
+                  <option key={a.iata} value={a.iata}>
+                    {a.city} ({a.iata})
+                  </option>
+                ))}
+              </select>
             </Row>
 
             {error && <p className="mt-2 text-[12px] text-stamp">{error}</p>}
