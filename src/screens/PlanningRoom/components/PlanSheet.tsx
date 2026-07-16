@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import RouteMap from "./RouteMap";
 import type { ParsedFields, PlanDetail, PlanStatus } from "@/types/trip";
 import { preparePayment } from "@/api/payments";
-import { getRun, ticketFlight } from "@/api/trips";
 import { getApiErrorMessage } from "@/lib/api";
 import { loadTossPayments } from "@/lib/tossPayments";
 import { formatWon } from "../lib/parseRequest";
@@ -73,6 +72,8 @@ function renderBoldText(text: string) {
 
 export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
   const { allocation: al, flight, hotel, days, payment, bookings } = plan;
+  /** 항공 결제 완료 건 (숙소 결제 payment와 별도) */
+  const flightPayment = plan.flight_payment ?? null;
   /** 재시도 이력까지 시간순으로 들어있으니 종류별 마지막(최근) 건 기준으로 표시
       kind가 없는 옛 데이터는 전부 숙소 예약이므로 "flight가 아닌 것" = 숙소 */
   const hotelBookings = bookings.filter((b) => b.kind !== "flight");
@@ -82,7 +83,8 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
 
   const confirmed = status === "confirmed";
 
-  const [isPaying, setIsPaying] = useState(false);
+  /** 결제창을 여는 중인 대상 (hotel/flight) — 버튼별 로딩 표시용 */
+  const [payingTarget, setPayingTarget] = useState<"hotel" | "flight" | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
 
   /**
@@ -124,12 +126,20 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
     });
   };
 
-  /** 확정된 플랜 결제: 서버가 금액을 정하고(prepare) 토스 결제창을 연다 */
-  const handlePay = async () => {
-    setIsPaying(true);
+  /**
+   * 확정된 플랜 결제: 서버가 금액을 정하고(prepare) 토스 결제창을 연다.
+   * target=hotel  → 결제 승인 시 숙소 예약(LiteAPI 샌드박스) 자동 진행
+   * target=flight → 결제 승인 시 항공 발권(자체 mock 공급자) 자동 진행 → PNR
+   * (발권은 별도 버튼이 아니라 결제의 후속 단계 — 숙소와 완전히 같은 UX)
+   */
+  const handlePay = async (target: "hotel" | "flight") => {
+    setPayingTarget(target);
     setPayError(null);
     try {
-      const [order] = await Promise.all([preparePayment(plan.plan_id), loadTossPayments()]);
+      const [order] = await Promise.all([
+        preparePayment(plan.plan_id, target),
+        loadTossPayments(),
+      ]);
       const toss = window.TossPayments!(order.client_key);
       const payment = toss.payment({ customerKey: "ANONYMOUS" });
       const backHere = `${window.location.origin}/payment/result`;
@@ -144,47 +154,13 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
       // 성공하면 브라우저가 토스 결제창으로 이동하므로 이 아래는 보통 실행되지 않는다
     } catch (e) {
       setPayError(getApiErrorMessage(e));
-      setIsPaying(false);
+      setPayingTarget(null);
     }
   };
 
-  /** 항공 발권 (자체 mock 공급자): 접수 -> 에이전트가 운임확인→좌석점유→발권 -> PNR */
-  const [ticket, setTicket] = useState<{ pnr: string } | null>(null);
-  const [isTicketing, setIsTicketing] = useState(false);
-  const [ticketError, setTicketError] = useState<string | null>(null);
-  /** 화면에 보여줄 PNR — 방금 발권한 것(ticket) 또는 저장된 발권 이력(lastTicket) */
+  /** 발권된 PNR — 저장된 발권 이력(kind=flight, 확정)에서 */
   const issuedPnr =
-    ticket?.pnr ?? (lastTicket?.status === "confirmed" ? lastTicket.booking_id : null);
-
-  const handleTicket = async () => {
-    setIsTicketing(true);
-    setTicketError(null);
-    try {
-      const accepted = await ticketFlight(plan.plan_id);
-      // 발권은 워커의 에이전트가 수행 — 완료될 때까지 폴링 (결제창과 달리 페이지 이동 없음)
-      const started = Date.now();
-      while (Date.now() - started < 90_000) {
-        const run = await getRun(accepted.run_id);
-        if (run.status === "completed") {
-          const r = run.result as { pnr?: string | null } | null;
-          if (r?.pnr) {
-            setTicket({ pnr: r.pnr });
-            return;
-          }
-          throw new Error("발권에 실패했습니다. 잠시 후 다시 시도해 주세요.");
-        }
-        if (run.status === "failed") {
-          throw new Error("발권에 실패했습니다. 잠시 후 다시 시도해 주세요.");
-        }
-        await new Promise((resolve) => setTimeout(resolve, 1200));
-      }
-      throw new Error("발권이 시간 초과되었습니다. 다시 시도해 주세요.");
-    } catch (e) {
-      setTicketError(e instanceof Error ? e.message : getApiErrorMessage(e));
-    } finally {
-      setIsTicketing(false);
-    }
-  };
+    lastTicket?.status === "confirmed" ? lastTicket.booking_id : null;
 
   const cities = days.length > 0
     ? Array.from(new Set(days.map((d) => d.city_name).filter(Boolean))).join(" · ")
@@ -247,6 +223,23 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
           v{version}
         </span>
       </div>
+
+      {/* 확정 CTA — 맨 아래에만 있으면 처음 쓰는 사용자가 "확정" 존재를 모를 수
+          있다는 피드백 → 헤더 바로 아래에 크게 배치 (하단 바는 보조로 유지) */}
+      {!readOnly && !confirmed && (
+        <div className="flex items-center gap-3 border-b border-line bg-cobalt-soft/50 px-7 py-4">
+          <p className="break-keep text-[13px] text-ink-2">
+            계획이 마음에 들면 <b className="text-ink">확정</b>하고 예약·결제로
+            넘어가세요. 고칠 곳은 왼쪽 채팅으로 말하면 됩니다.
+          </p>
+          <button
+            onClick={onConfirm}
+            className="ml-auto whitespace-nowrap rounded-field bg-cobalt px-6 py-3 text-[15px] font-bold text-white shadow-[0_6px_16px_-6px_rgba(39,67,224,.6)] transition-all hover:-translate-y-px hover:bg-[#1c36c4]"
+          >
+            이 계획으로 확정하기
+          </button>
+        </div>
+      )}
 
       {/* 예산 정산 */}
       <div className="border-b border-line bg-[#fcfdfd] px-7 py-5">
@@ -380,20 +373,20 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                       {openInfo === "hotel" ? "▲" : "▼"}
                     </p>
                   </button>
-                  <span className="whitespace-nowrap text-[13.5px] font-bold">
+                  <span className="whitespace-nowrap text-[17px] font-extrabold tracking-[-0.02em]">
                     {formatWon(budgetAl ? budgetAl.breakdown.hotel_krw : hotel.price_krw)}원
                   </span>
                   {payment ? (
-                    <span className="whitespace-nowrap rounded-field bg-teal/10 px-3 py-1.5 text-[11.5px] font-bold text-teal">
+                    <span className="whitespace-nowrap rounded-field bg-teal/10 px-4 py-2.5 text-[13px] font-bold text-teal">
                       ✓ 결제 완료
                     </span>
                   ) : (
                     <button
-                      onClick={handlePay}
-                      disabled={isPaying}
-                      className="whitespace-nowrap rounded-field bg-cobalt px-3.5 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-[#1c36c4] disabled:opacity-60"
+                      onClick={() => handlePay("hotel")}
+                      disabled={payingTarget !== null}
+                      className="whitespace-nowrap rounded-field bg-cobalt px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)] transition-all hover:-translate-y-px hover:bg-[#1c36c4] disabled:opacity-60"
                     >
-                      {isPaying ? "결제창 여는 중..." : "결제하기"}
+                      {payingTarget === "hotel" ? "결제창 여는 중..." : "결제하기"}
                     </button>
                   )}
                 </div>
@@ -409,9 +402,25 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                         </span>
                       </p>
                     )}
+                    {hotel.address && <p>주소: {hotel.address}</p>}
                     {pax !== null && <p>객실: 트윈 {Math.ceil(pax / 2)}실{nights > 0 && ` · ${nights}박`}</p>}
                     {nights > 0 && <p>1박 요금: {formatWon(Math.round(hotel.price_krw / nights))}원</p>}
                     {hotel.utility !== null && <p>만족도 점수: {hotel.utility}</p>}
+                    {(hotel.utility_reasons?.length ?? 0) > 0 && (
+                      <p className="text-ink-3">
+                        점수 근거: {hotel.utility_reasons!.join(" · ")}
+                      </p>
+                    )}
+                    {hotel.booking_url && (
+                      <a
+                        href={hotel.booking_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-flex text-[12px] font-semibold text-cobalt hover:underline"
+                      >
+                        구글에서 이 숙소 더 알아보기 →
+                      </a>
+                    )}
                     <p className="mt-1 text-ink-3">
                       결제는 토스페이먼츠로 진행되고, 승인되면 예약까지 자동으로 이어집니다.
                     </p>
@@ -456,66 +465,72 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                       항공 · 정보 보기 {openInfo === "flight" ? "▲" : "▼"}
                     </p>
                   </button>
-                  <span className="whitespace-nowrap text-[13.5px] font-bold">
+                  <span className="whitespace-nowrap text-[17px] font-extrabold tracking-[-0.02em]">
                     {formatWon(budgetAl ? budgetAl.breakdown.flight_krw : flight.price_krw)}원
                   </span>
-                  {issuedPnr ? (
-                    <span className="whitespace-nowrap rounded-field bg-teal/10 px-3 py-1.5 text-[11.5px] font-bold text-teal">
-                      ✓ 발권 완료
+                  {flightPayment ? (
+                    <span className="whitespace-nowrap rounded-field bg-teal/10 px-4 py-2.5 text-[13px] font-bold text-teal">
+                      ✓ 결제 완료
                     </span>
                   ) : (
                     <button
-                      onClick={handleTicket}
-                      disabled={isTicketing}
-                      className="whitespace-nowrap rounded-field bg-cobalt px-3.5 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-[#1c36c4] disabled:opacity-60"
+                      onClick={() => handlePay("flight")}
+                      disabled={payingTarget !== null}
+                      className="whitespace-nowrap rounded-field bg-cobalt px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)] transition-all hover:-translate-y-px hover:bg-[#1c36c4] disabled:opacity-60"
                     >
-                      {isTicketing ? "발권 중..." : "발권하기"}
+                      {payingTarget === "flight" ? "결제창 여는 중..." : "결제하기"}
                     </button>
                   )}
                 </div>
 
                 {openInfo === "flight" && (
                   <div className="mt-3 rounded-lg bg-[#f4f6f8] px-3.5 py-3 text-[12.5px] leading-relaxed text-ink-2">
+                    {flight.route && <p>노선: {flight.route} (왕복)</p>}
                     {(flight.departure_time || flight.arrival_time) && (
                       <p>
-                        시간: {flight.departure_time && formatClock(flight.departure_time)}
-                        {flight.arrival_time && ` → ${formatClock(flight.arrival_time)}`}
+                        가는 편: {flight.departure_time && formatClock(flight.departure_time)}
+                        {flight.arrival_time && ` → ${formatClock(flight.arrival_time)}`} 도착
                       </p>
                     )}
-                    {flight.duration_min != null && <p>소요: {formatDuration(flight.duration_min)}</p>}
+                    {flight.duration_min != null && <p>비행 시간: {formatDuration(flight.duration_min)}</p>}
                     {flight.stops != null && (
                       <p>경유: {flight.stops === 0 ? "직항" : `${flight.stops}회`}</p>
                     )}
                     {flight.utility !== null && <p>만족도 점수: {flight.utility}</p>}
-                    <p className="mt-1 text-ink-3">
-                      발권은 자체 mock 공급자로 진행되는 시뮬레이션입니다 (실제 결제
-                      없음). 운임 재확인 → 좌석 점유 → 발권 순서로 에이전트가
-                      수행하고 PNR(예약번호)을 발급받아요.
-                    </p>
                     {flight.booking_url && (
                       <a
                         href={flight.booking_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-1.5 inline-flex text-[12px] font-semibold text-cobalt hover:underline"
+                        className="mt-1 inline-flex text-[12px] font-semibold text-cobalt hover:underline"
                       >
-                        실제 예매처에서 직접 예매하기 →
+                        구글 항공편에서 이 노선 더 알아보기 →
                       </a>
                     )}
+                    <p className="mt-1 text-ink-3">
+                      결제는 토스페이먼츠로 진행되고, 승인되면 자체 공급자가 발권을
+                      완료해 PNR(예약번호)을 발급합니다 (샌드박스 — 실제 청구 없음).
+                    </p>
                   </div>
                 )}
 
-                {(issuedPnr || ticketError) && (
+                {(issuedPnr || flightPayment) && (
                   <div className="mt-3 rounded-lg bg-teal/5 px-3.5 py-2.5 text-[12.5px] leading-relaxed">
-                    {issuedPnr && (
-                      <p className="font-semibold text-teal">
-                        ✓ 발권 완료 · PNR {issuedPnr}
-                        <span className="ml-1.5 font-normal text-ink-3">
-                          (mock 공급자 시뮬레이션 — 실제 결제 없음)
-                        </span>
+                    {flightPayment && (
+                      <p className="text-ink-2">
+                        ✓ {formatWon(flightPayment.amount)}원 · {flightPayment.method} ·{" "}
+                        {formatDateTime(flightPayment.approved_at)} 결제 완료
                       </p>
                     )}
-                    {ticketError && <p className="font-semibold text-stamp">{ticketError}</p>}
+                    {issuedPnr ? (
+                      <p className="font-semibold text-teal">
+                        ✓ 발권 완료 · PNR {issuedPnr}
+                      </p>
+                    ) : flightPayment ? (
+                      <p className="text-ink-3">
+                        발권 처리 중입니다 — 잠시 후 새로고침하면 PNR이 표시됩니다.
+                      </p>
+                    ) : null}
                   </div>
                 )}
               </div>

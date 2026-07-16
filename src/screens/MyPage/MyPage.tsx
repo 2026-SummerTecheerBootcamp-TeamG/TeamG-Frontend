@@ -50,14 +50,14 @@ export default function MyPage() {
         <TripDetail planId={selectedPlanId} onBack={backToList} />
       ) : (
         <>
-          <div className="mb-6 flex items-center gap-4">
+          {/* 제목 왼쪽 / 돌아가기 오른쪽 끝 — justify-between으로 양끝 정렬 */}
+          <div className="mb-6 flex items-center justify-between">
             <h1 className="text-[clamp(26px,3.4vw,38px)] font-extrabold tracking-[-0.045em]">
               마이페이지
             </h1>
-            {/* 홈으로 돌아가는 명시적 버튼 (헤더의 "홈" 메뉴 대신 이 자리로 — 피드백 반영) */}
             <button
               onClick={() => navigate("/")}
-              className="rounded-lg border border-line bg-white px-3 py-1.5 text-[13px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
+              className="rounded-lg border border-line bg-white px-3.5 py-2 text-[13.5px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
             >
               ← 돌아가기
             </button>
