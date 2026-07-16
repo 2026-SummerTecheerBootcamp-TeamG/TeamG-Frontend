@@ -181,6 +181,15 @@ export interface PlanBooking {
   created_at: string;
 }
 
+/** 결제 완료 건 (payments/confirm 승인 결과). 결제한 적 없으면 null */
+export interface PlanPayment {
+  status: "DONE";
+  amount: number;
+  method: string;
+  order_name: string;
+  approved_at: string;
+}
+
 export interface PlanDetail {
   plan_id: number;
   request_id: number;
@@ -190,6 +199,7 @@ export interface PlanDetail {
   flight: PlanFlight | null;
   hotel: PlanHotel | null;
   days: PlanDay[];
+  payment: PlanPayment | null;
   bookings: PlanBooking[];
   created_at: string;
 }

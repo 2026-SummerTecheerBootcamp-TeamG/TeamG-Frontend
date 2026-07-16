@@ -58,6 +58,15 @@ export default function PlanningRoom() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, version, error]);
 
+  /** 계획 생성: 로그인 안 했으면 로그인 화면으로 보낸다 */
+  const handleSend = (text: string) => {
+    if (!isLoggedIn) {
+      navigate("/login", { state: { from: "/" } });
+      return;
+    }
+    chat.send(text);
+  };
+
   /** 확정: 로그인 안 했으면 로그인 화면으로 보낸다 */
   const handleConfirm = async () => {
     if (!isLoggedIn) {
@@ -109,7 +118,7 @@ export default function PlanningRoom() {
             messages={chat.messages}
             isTyping={chat.isTyping}
             hideExamples={chat.isReady}
-            onSend={chat.send}
+            onSend={handleSend}
             onReset={chat.reset}
           />
 

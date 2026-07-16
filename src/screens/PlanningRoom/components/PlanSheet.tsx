@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import RouteMap from "./RouteMap";
 import type { ParsedFields, PlanDetail, PlanStatus } from "@/types/trip";
 import { preparePayment } from "@/api/payments";
@@ -26,6 +27,13 @@ const formatDay = (iso: string) => {
 /** "2026-09-15 09:20" -> "09:20" */
 const formatClock = (raw: string) => raw.split(" ")[1] ?? raw;
 
+/** "2026-07-16T14:32:10+09:00" -> "2026-07-16 14:32" */
+const formatDateTime = (iso: string) => {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 /** 175(분) -> "2시간 55분" */
 const formatDuration = (min: number) => {
   const h = Math.floor(min / 60);
@@ -33,8 +41,40 @@ const formatDuration = (min: number) => {
   return h > 0 ? `${h}시간${m > 0 ? ` ${m}분` : ""}` : `${m}분`;
 };
 
+/** narrative(마크다운)를 "## Day N" 헤더 기준으로 잘라 DAY별 설명 텍스트만 뽑아낸다 */
+function splitNarrativeByDay(narrative: string): Map<number, string> {
+  const result = new Map<number, string>();
+  const headerRe = /##\s*Day\s*(\d+)[^\n]*\n/g;
+  const matches = [...narrative.matchAll(headerRe)];
+
+  matches.forEach((m, idx) => {
+    const dayNumber = Number(m[1]);
+    const start = m.index! + m[0].length;
+    const end = idx + 1 < matches.length ? matches[idx + 1].index! : narrative.length;
+    const text = narrative.slice(start, end).replace(/^-+\s*$/gm, "").trim();
+    if (text) result.set(dayNumber, text);
+  });
+
+  return result;
+}
+
+/** "**text**" 마크다운 굵게 표시만 최소 처리해서 렌더링한다 (마크다운 라이브러리 없이) */
+function renderBoldText(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((chunk, i) =>
+    chunk.startsWith("**") && chunk.endsWith("**") ? (
+      <strong key={i} className="font-semibold text-ink">
+        {chunk.slice(2, -2)}
+      </strong>
+    ) : (
+      chunk
+    ),
+  );
+}
+
 export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
-  const { allocation: al, flight, hotel, days } = plan;
+  const { allocation: al, flight, hotel, days, payment, bookings } = plan;
+  /** 재시도 이력까지 시간순으로 들어있으니 마지막(최근) 건 기준으로 표시 */
+  const lastBooking = bookings.length > 0 ? bookings[bookings.length - 1] : null;
 
   const confirmed = status === "confirmed";
 
@@ -53,6 +93,20 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
     if (!prevConfirmedRef.current && confirmed && !readOnly) setModalOpen(true);
     prevConfirmedRef.current = confirmed;
   }, [confirmed, readOnly]);
+  /** DAY별 설명 접기/펼치기 */
+  const narrativeByDay = useMemo(
+    () => (plan.narrative ? splitNarrativeByDay(plan.narrative) : new Map<number, string>()),
+    [plan.narrative],
+  );
+  const [openDays, setOpenDays] = useState<Set<number>>(new Set());
+  const toggleDay = (dayNumber: number) => {
+    setOpenDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(dayNumber)) next.delete(dayNumber);
+      else next.add(dayNumber);
+      return next;
+    });
+  };
 
   /** 확정된 플랜 결제: 서버가 금액을 정하고(prepare) 토스 결제창을 연다 */
   const handlePay = async () => {
@@ -135,13 +189,6 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
           v{version}
         </span>
       </div>
-
-      {/* 설명문 */}
-      {plan.narrative && (
-        <div className="border-b border-line-soft bg-[#fcfdfd] px-7 py-4 text-[13px] leading-relaxed text-ink-2">
-          {plan.narrative}
-        </div>
-      )}
 
       {/* 예산 정산 */}
       <div className="border-b border-line bg-[#fcfdfd] px-7 py-5">
@@ -285,7 +332,7 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
             <p className="text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
               숙소{nights > 0 && ` · ${nights}박`}
             </p>
-            {confirmed && !readOnly && (
+            {confirmed && !readOnly && !payment && (
               <button
                 onClick={handlePay}
                 disabled={isPaying}
@@ -333,6 +380,24 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
               숙소 확인하러 가기 →
             </a>
           )}
+
+          {/* 결제/예약 상태 - 결제 이력이나 예약 시도가 없으면 표시하지 않음 */}
+          {(payment || lastBooking) && (
+            <div className="mt-3 rounded-lg bg-[#f4f6f8] px-3.5 py-3 text-[12.5px] leading-relaxed text-ink-2">
+              {payment && (
+                <p>
+                  {formatWon(payment.amount)}원을 {payment.method}로 {formatDateTime(payment.approved_at)}에 결제했습니다.
+                </p>
+              )}
+              {lastBooking && (
+                <p className={payment ? "mt-1" : ""}>
+                  {lastBooking.status === "confirmed"
+                    ? `예약이 확정됐습니다${lastBooking.confirmation ? ` (확인번호: ${lastBooking.confirmation})` : ""}`
+                    : "예약에 실패했습니다. 다시 시도해 주세요."}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -367,6 +432,29 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
 
               )}
             </div>
+
+            {narrativeByDay.has(day.day_number) && (
+              <div className="mb-3.5">
+                <button
+                  onClick={() => toggleDay(day.day_number)}
+                  className="flex w-full items-center gap-1.5 rounded-lg border border-line-soft bg-[#fcfdfd] px-3 py-2 text-left text-[12.5px] font-semibold text-ink-2 transition-colors hover:border-ink-3"
+                >
+                  <span
+                    className={`inline-block text-[10px] text-ink-3 transition-transform ${
+                      openDays.has(day.day_number) ? "rotate-90" : ""
+                    }`}
+                  >
+                    ▶
+                  </span>
+                  일정 설명 {openDays.has(day.day_number) ? "접기" : "펼쳐보기"}
+                </button>
+                {openDays.has(day.day_number) && (
+                  <div className="mt-2 whitespace-pre-line rounded-lg bg-[#fcfdfd] px-3.5 py-3 text-[13px] leading-relaxed text-ink-2">
+                    {renderBoldText(narrativeByDay.get(day.day_number)!)}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="relative pl-[34px]">
               {/* 세로선 */}
