@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import ChatPanel from "./components/ChatPanel";
 import IntroCards from "./components/IntroCards";
@@ -13,7 +13,7 @@ export default function PlanningRoom() {
   const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
 
-  const { plan, request, status, step, version, error, start, editWithMessage, confirm } =
+  const { plan, request, status, step, version, error, start, loadExisting, editWithMessage, confirm } =
     usePlan();
 
   const chat = useChat({
@@ -21,6 +21,25 @@ export default function PlanningRoom() {
     onReady: start,
     onEdit: editWithMessage,
   });
+
+  /** 마이페이지에서 "?plan=8"로 넘어온 경우: 저장된 계획을 불러와 수정 모드로 시작 */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const loadedPlanRef = useRef(false); // StrictMode 이중 실행/재렌더 시 중복 로드 방지
+  useEffect(() => {
+    const planParam = searchParams.get("plan");
+    if (!planParam || loadedPlanRef.current) return;
+    loadedPlanRef.current = true;
+    loadExisting(Number(planParam)).then((ok) => {
+      chat.notify(
+        ok
+          ? "저장된 계획을 불러왔습니다. 원하는 수정을 문장으로 적어주세요.\n예: “2일차는 좀 여유롭게 해줘”"
+          : "계획을 불러오지 못했습니다. 마이페이지에서 다시 시도해 주세요.",
+      );
+      // 주소를 "/"로 정리 - 이후 새 계획을 만들 때 옛 plan 파라미터가 남지 않게
+      setSearchParams({}, { replace: true });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   /** 계획 생성/실패를 챗 쪽에 알린다 */
   const notifiedStatusRef = useRef<string | null>(null);
@@ -38,6 +57,15 @@ export default function PlanningRoom() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, version, error]);
+
+  /** 계획 생성: 로그인 안 했으면 로그인 화면으로 보낸다 */
+  const handleSend = (text: string) => {
+    if (!isLoggedIn) {
+      navigate("/login", { state: { from: "/" } });
+      return;
+    }
+    chat.send(text);
+  };
 
   /** 확정: 로그인 안 했으면 로그인 화면으로 보낸다 */
   const handleConfirm = async () => {
@@ -90,7 +118,7 @@ export default function PlanningRoom() {
             messages={chat.messages}
             isTyping={chat.isTyping}
             hideExamples={chat.isReady}
-            onSend={chat.send}
+            onSend={handleSend}
             onReset={chat.reset}
           />
 

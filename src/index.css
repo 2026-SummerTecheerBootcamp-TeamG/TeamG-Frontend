@@ -52,6 +52,15 @@
   :focus-visible {
     @apply outline-2 outline-cobalt outline-offset-2 rounded-md;
   }
+
+  /* Tailwind v4는 버튼 커서를 default로 바꿔놨다(브라우저 기본값 따라가기로 정책 변경).
+     우리 서비스는 "누를 수 있는 건 손가락 커서"가 UX 기대라서 전역으로 복원한다.
+     :not(:disabled) — 비활성 버튼은 그대로 (disabled:cursor-not-allowed 유틸도 살아있음)
+     [role="button"] — button 태그가 아니어도 버튼 역할을 하는 요소까지 포함 */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 /* 모션 최소화 설정 존중 */

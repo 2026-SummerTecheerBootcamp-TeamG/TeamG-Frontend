@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import ProfileCard from "./components/ProfileCard";
 import TripList from "./components/TripList";
 import TripDetail from "./components/TripDetail";
@@ -14,8 +15,28 @@ import type { TripSummary } from "@/types/trip";
 export default function MyPage() {
   const [trips, setTrips] = useState<TripSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  /** 선택한 plan_id (null이면 목록 화면) */
-  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+
+  // 선택한 계획을 내부 state가 아니라 URL 쿼리(?plan=8)로 관리한다.
+  // 이유: state로만 들고 있으면 상세를 보다가 헤더의 "마이페이지"를 눌러도
+  //       주소가 /mypage 그대로라 아무 일도 안 일어남(무반응 버그).
+  //       URL로 관리하면 헤더 클릭(쿼리 없는 /mypage)이 곧 목록 복귀가 되고,
+  //       브라우저 뒤로가기·새로고침·링크 공유도 전부 자연스럽게 동작한다.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const planParam = searchParams.get("plan");
+  const selectedPlanId =
+    planParam !== null && !Number.isNaN(Number(planParam)) ? Number(planParam) : null;
+  const selectPlan = (id: number) => {
+    // 미확정(draft) 계획은 읽기 전용 상세 대신 메인 워크벤치로 —
+    // 거기서 대화로 이어서 수정할 수 있다 (PlanningRoom이 ?plan=을 읽어 불러옴)
+    const trip = trips?.find((t) => t.plan_id === id);
+    if (trip?.status === "draft") {
+      navigate(`/?plan=${id}`);
+      return;
+    }
+    setSearchParams({ plan: String(id) });
+  };
+  const backToList = () => setSearchParams({});
 
   useEffect(() => {
     listTrips()
@@ -26,7 +47,7 @@ export default function MyPage() {
   return (
     <div className="mx-auto max-w-[1240px] px-5 py-11 md:px-7">
       {selectedPlanId !== null ? (
-        <TripDetail planId={selectedPlanId} onBack={() => setSelectedPlanId(null)} />
+        <TripDetail planId={selectedPlanId} onBack={backToList} />
       ) : (
         <>
           <h1 className="mb-6 text-[clamp(26px,3.4vw,38px)] font-extrabold tracking-[-0.045em]">
@@ -40,7 +61,7 @@ export default function MyPage() {
                 {error}
               </p>
             ) : (
-              <TripList trips={trips} onSelect={setSelectedPlanId} />
+              <TripList trips={trips} onSelect={selectPlan} />
             )}
           </div>
         </>

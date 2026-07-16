@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ParsedFields, PlanDetail, PlanStatus } from "@/types/trip";
+import type { ParsedFields, PlanDetail, PlanStatus, TraceEvent } from "@/types/trip";
 import {
   confirmParse,
   confirmPlan as confirmPlanRequest,
@@ -9,12 +9,33 @@ import {
   getRun,
 } from "@/api/trips";
 
-const STEP_COUNT = 5;
-const STEP_DELAY = 1200;
 const POLL_INTERVAL = 1500;
 const POLL_TIMEOUT = 120_000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * trace 이벤트 목록 -> 현재 진행 단계 (0~4, PlanProgress의 STEPS 인덱스)
+ *
+ * 예전에는 타이머로 단계를 "연출"했는데(1.2초마다 한 칸), 그러면 연출이 끝난 뒤
+ * 남은 실제 작업 시간 전부를 마지막 칸이 뒤집어써서
+ * "예산 산정이 왜 이렇게 오래 걸리냐"는 오해를 만들었다 (실제 예산 배분은 0.001초).
+ * 이제 백엔드가 폴링 응답에 실어주는 실제 trace 이벤트로 단계를 계산한다.
+ *
+ * Math.max로만 올리는 이유: 병렬 실행 때문에 이벤트 순서가 섞여도 단계가 뒤로 가지 않게.
+ */
+function stepFromEvents(events: TraceEvent[] | undefined): number {
+  let step = 0;
+  for (const e of events ?? []) {
+    const a = e.action ?? "";
+    if (e.kind === "done" || a.includes("저장")) step = Math.max(step, 4);
+    else if (a.includes("일정") || a.includes("내러티브")) step = Math.max(step, 3);
+    else if (a.includes("배분")) step = Math.max(step, 2);
+    else if (e.kind === "api" || e.kind === "llm" || e.kind === "data")
+      step = Math.max(step, 1); // 검색 단계의 툴 호출/LLM 턴들
+  }
+  return step;
+}
 
 /** 계획 생성 / 수정 / 확정 - 실제 백엔드 파이프라인(parse 확정 -> runs 접수 -> 폴링 -> plan 조회)을 오케스트레이션 */
 export function usePlan() {
@@ -32,21 +53,13 @@ export function usePlan() {
     cancelledRef.current = true;
   }, []);
 
-  /** 빌드 중 5단계를 시각적으로만 순서대로 켠다 (실제 파이프라인 진행률과 별개) */
-  const tickSteps = useCallback(async (token: { cancelled: boolean }) => {
-    for (let i = 0; i < STEP_COUNT; i++) {
-      if (token.cancelled) return;
-      setStep(i);
-      await sleep(STEP_DELAY);
-    }
-  }, []);
-
-  /** run_id가 완료/실패될 때까지 폴링 */
+  /** run_id가 완료/실패될 때까지 폴링 — 폴링할 때마다 실제 진행 단계도 갱신 */
   const pollRun = useCallback(async (runId: string, token: { cancelled: boolean }) => {
     const started = Date.now();
     while (Date.now() - started < POLL_TIMEOUT) {
       if (token.cancelled) return null;
       const detail = await getRun(runId);
+      setStep(stepFromEvents(detail.events)); // 진짜 진행률 (trace 이벤트 기반)
       if (detail.status === "completed") return detail.result;
       if (detail.status === "failed") throw new Error("계획 생성에 실패했습니다.");
       await sleep(POLL_INTERVAL);
@@ -65,15 +78,12 @@ export function usePlan() {
       setVersion(1);
       setRequest(fields);
 
-      const steps = tickSteps(token);
-
       try {
         await confirmParse(parseId);
         const run = await createRun(parseId);
         if (!run.plan_id) throw new Error("plan_id를 받지 못했습니다.");
 
         await pollRun(run.run_id, token);
-        token.cancelled = true; // 단계 표시 애니메이션 중단
 
         const detail = await getPlan(run.plan_id);
         if (cancelledRef.current) return;
@@ -84,12 +94,29 @@ export function usePlan() {
         if (cancelledRef.current) return;
         setError(e instanceof Error ? e.message : "계획을 생성하지 못했습니다.");
         setStatus("error");
-      } finally {
-        await steps;
       }
     },
-    [pollRun, tickSteps],
+    [pollRun],
   );
+
+  /**
+   * 마이페이지에서 넘어온 기존 계획(draft)을 불러와 바로 수정 모드로 전환
+   * (생성 파이프라인을 거치지 않고 저장된 스냅샷을 그대로 워크벤치에 올린다)
+   */
+  const loadExisting = useCallback(async (planId: number) => {
+    cancelledRef.current = false;
+    try {
+      const detail = await getPlan(planId);
+      if (cancelledRef.current) return false;
+      setPlan(detail);
+      setRequest(null); // 저장 스냅샷엔 요청 요약이 없음 (PlanSheet가 null 허용)
+      setVersion(1);
+      setStatus(detail.status === "confirmed" ? "confirmed" : "ready");
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
   /** 문장으로 들어온 수정 요청 */
   const editWithMessage = useCallback(
@@ -141,5 +168,5 @@ export function usePlan() {
     }
   }, [plan]);
 
-  return { plan, request, status, step, version, error, start, editWithMessage, confirm };
+  return { plan, request, status, step, version, error, start, loadExisting, editWithMessage, confirm };
 }

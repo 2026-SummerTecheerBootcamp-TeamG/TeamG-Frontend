@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import RouteMap from "./RouteMap";
 import type { ParsedFields, PlanDetail, PlanStatus } from "@/types/trip";
 import { preparePayment } from "@/api/payments";
@@ -40,6 +40,36 @@ const formatDuration = (min: number) => {
   return h > 0 ? `${h}시간${m > 0 ? ` ${m}분` : ""}` : `${m}분`;
 };
 
+/** narrative(마크다운)를 "## Day N" 헤더 기준으로 잘라 DAY별 설명 텍스트만 뽑아낸다 */
+function splitNarrativeByDay(narrative: string): Map<number, string> {
+  const result = new Map<number, string>();
+  const headerRe = /##\s*Day\s*(\d+)[^\n]*\n/g;
+  const matches = [...narrative.matchAll(headerRe)];
+
+  matches.forEach((m, idx) => {
+    const dayNumber = Number(m[1]);
+    const start = m.index! + m[0].length;
+    const end = idx + 1 < matches.length ? matches[idx + 1].index! : narrative.length;
+    const text = narrative.slice(start, end).replace(/^-+\s*$/gm, "").trim();
+    if (text) result.set(dayNumber, text);
+  });
+
+  return result;
+}
+
+/** "**text**" 마크다운 굵게 표시만 최소 처리해서 렌더링한다 (마크다운 라이브러리 없이) */
+function renderBoldText(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((chunk, i) =>
+    chunk.startsWith("**") && chunk.endsWith("**") ? (
+      <strong key={i} className="font-semibold text-ink">
+        {chunk.slice(2, -2)}
+      </strong>
+    ) : (
+      chunk
+    ),
+  );
+}
+
 export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
   const { allocation: al, flight, hotel, days, payment, bookings } = plan;
   /** 재시도 이력까지 시간순으로 들어있으니 마지막(최근) 건 기준으로 표시 */
@@ -49,6 +79,33 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
 
   const [isPaying, setIsPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+
+  /**
+   * 확정 축하 모달 — "확정했는데 그 다음이 없다"는 피드백 대응.
+   * 확정되는 "순간"(ready -> confirmed 전환)에만 열린다.
+   * prevRef와 비교하는 이유: 마이페이지에서 이미 확정된 계획을 열 때는
+   * 처음부터 confirmed라 전환이 없음 -> 모달이 안 뜸 (의도된 동작)
+   */
+  const [modalOpen, setModalOpen] = useState(false);
+  const prevConfirmedRef = useRef(confirmed);
+  useEffect(() => {
+    if (!prevConfirmedRef.current && confirmed && !readOnly) setModalOpen(true);
+    prevConfirmedRef.current = confirmed;
+  }, [confirmed, readOnly]);
+  /** DAY별 설명 접기/펼치기 */
+  const narrativeByDay = useMemo(
+    () => (plan.narrative ? splitNarrativeByDay(plan.narrative) : new Map<number, string>()),
+    [plan.narrative],
+  );
+  const [openDays, setOpenDays] = useState<Set<number>>(new Set());
+  const toggleDay = (dayNumber: number) => {
+    setOpenDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(dayNumber)) next.delete(dayNumber);
+      else next.add(dayNumber);
+      return next;
+    });
+  };
 
   /** 확정된 플랜 결제: 서버가 금액을 정하고(prepare) 토스 결제창을 연다 */
   const handlePay = async () => {
@@ -131,13 +188,6 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
           v{version}
         </span>
       </div>
-
-      {/* 설명문 */}
-      {plan.narrative && (
-        <div className="border-b border-line-soft bg-[#fcfdfd] px-7 py-4 text-[13px] leading-relaxed text-ink-2">
-          {plan.narrative}
-        </div>
-      )}
 
       {/* 예산 정산 */}
       <div className="border-b border-line bg-[#fcfdfd] px-7 py-5">
@@ -382,6 +432,29 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
               )}
             </div>
 
+            {narrativeByDay.has(day.day_number) && (
+              <div className="mb-3.5">
+                <button
+                  onClick={() => toggleDay(day.day_number)}
+                  className="flex w-full items-center gap-1.5 rounded-lg border border-line-soft bg-[#fcfdfd] px-3 py-2 text-left text-[12.5px] font-semibold text-ink-2 transition-colors hover:border-ink-3"
+                >
+                  <span
+                    className={`inline-block text-[10px] text-ink-3 transition-transform ${
+                      openDays.has(day.day_number) ? "rotate-90" : ""
+                    }`}
+                  >
+                    ▶
+                  </span>
+                  일정 설명 {openDays.has(day.day_number) ? "접기" : "펼쳐보기"}
+                </button>
+                {openDays.has(day.day_number) && (
+                  <div className="mt-2 whitespace-pre-line rounded-lg bg-[#fcfdfd] px-3.5 py-3 text-[13px] leading-relaxed text-ink-2">
+                    {renderBoldText(narrativeByDay.get(day.day_number)!)}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="relative pl-[34px]">
               {/* 세로선 */}
               <span className="absolute bottom-4 left-[18px] top-1.5 w-px bg-line" />
@@ -447,6 +520,126 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
             </button>
           </div>
           {payError && <p className="mt-2 text-[12px] text-stamp">{payError}</p>}
+        </div>
+      )}
+
+      {/* ── 확정 축하 모달: 예약/결제로 이어지는 출구 ─────────────────────
+          여행 예약 서비스처럼 확정 직후 숙소/항공 정보를 다시 보여주고
+          결제(토스)와 항공권 예매(딥링크)로 바로 보낸다 */}
+      {modalOpen && (
+        <div
+          className="fixed inset-0 z-[60] grid place-items-center bg-ink/45 px-5 backdrop-blur-[2px]"
+          onClick={() => setModalOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()} // 카드 안 클릭이 배경 닫기로 번지지 않게
+            className="w-full max-w-[460px] rounded-card border border-line bg-white shadow-[0_24px_60px_-16px_rgba(15,20,24,.4)]"
+            style={{ fontFamily: "Pretendard, sans-serif" }}
+          >
+            {/* 모달 헤더 */}
+            <div className="border-b border-line px-6 pb-4 pt-6 text-center">
+              <span className="mx-auto mb-2 grid h-11 w-11 place-items-center rounded-full bg-teal/10 text-[22px]">
+                🎉
+              </span>
+              <h3 className="text-[19px] font-extrabold tracking-[-0.03em]">
+                계획이 확정됐어요
+              </h3>
+              <p className="mt-1.5 break-keep text-[12.5px] leading-relaxed text-ink-2">
+                이제 예약과 결제를 진행할 수 있어요. 진행 상황은 결제 완료 화면과
+                마이페이지에서 언제든 확인할 수 있습니다.
+              </p>
+            </div>
+
+            <div className="space-y-3 px-6 py-5">
+              {/* 숙소: 토스 결제 -> 결제 승인 시 예약까지 자동 진행 */}
+              {hotel && (
+                <div className="rounded-field border border-line bg-paper p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-11 w-11 shrink-0 rounded-lg bg-gradient-to-br from-[#20303f] to-[#3c5468]" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14.5px] font-bold tracking-[-0.02em]">
+                        {hotel.name}
+                      </p>
+                      <p className="mt-0.5 text-[11.5px] text-ink-3">
+                        {hotel.stars !== null && (
+                          <span className="mr-1.5 text-amber">{"★".repeat(hotel.stars)}</span>
+                        )}
+                        {nights > 0 && `${nights}박`}
+                        {pax !== null && ` · 트윈 ${Math.ceil(pax / 2)}실`}
+                      </p>
+                    </div>
+                    <span className="whitespace-nowrap text-[14px] font-bold">
+                      {formatWon(budgetAl ? budgetAl.breakdown.hotel_krw : hotel.price_krw)}원
+                    </span>
+                  </div>
+                  <button
+                    onClick={handlePay}
+                    disabled={isPaying}
+                    className="mt-3 w-full rounded-field bg-cobalt py-2.5 text-[13.5px] font-bold text-white transition-colors hover:bg-[#1c36c4] disabled:opacity-60"
+                  >
+                    {isPaying ? "결제창 여는 중..." : "숙소 결제하고 예약하기"}
+                  </button>
+                  <p className="mt-1.5 text-center text-[11px] text-ink-3">
+                    결제가 승인되면 예약까지 자동으로 진행됩니다
+                  </p>
+                </div>
+              )}
+
+              {/* 항공: 발권 규제로 직접 결제 대신 예매 딥링크로 안내 */}
+              {flight && (
+                <div className="rounded-field border border-line bg-paper p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14.5px] font-bold tracking-[-0.02em]">
+                        {flight.airline}
+                      </p>
+                      <p className="mt-0.5 text-[11.5px] text-ink-3">
+                        {flight.departure_time && formatClock(flight.departure_time)}
+                        {flight.arrival_time && ` → ${formatClock(flight.arrival_time)}`}
+                        {flight.stops != null &&
+                          ` · ${flight.stops === 0 ? "직항" : `경유 ${flight.stops}회`}`}
+                      </p>
+                    </div>
+                    <span className="whitespace-nowrap text-[14px] font-bold">
+                      {formatWon(budgetAl ? budgetAl.breakdown.flight_krw : flight.price_krw)}원
+                    </span>
+                  </div>
+                  {flight.booking_url && (
+                    <a
+                      href={flight.booking_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 block w-full rounded-field border-[1.5px] border-cobalt py-2.5 text-center text-[13.5px] font-bold text-cobalt transition-colors hover:bg-cobalt-soft"
+                    >
+                      항공권 예매하러 가기 →
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* 숙소도 항공도 없는 계획(후보 0건)일 때의 안내 */}
+              {!hotel && !flight && (
+                <p className="py-2 text-center text-[13px] text-ink-3">
+                  계획이 마이페이지에 저장됐습니다.
+                </p>
+              )}
+
+              {payError && (
+                <p className="text-center text-[12px] text-stamp">{payError}</p>
+              )}
+            </div>
+
+            <div className="border-t border-line-soft px-6 py-3.5">
+              <button
+                onClick={() => setModalOpen(false)}
+                className="w-full rounded-field py-2 text-[13px] font-semibold text-ink-3 transition-colors hover:bg-line-soft hover:text-ink"
+              >
+                나중에 할게요 — 계획서에서 언제든 결제할 수 있어요
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
