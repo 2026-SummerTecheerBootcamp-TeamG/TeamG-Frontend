@@ -31,20 +31,20 @@ export default function PaymentResult() {
   });
   const [booking, setBooking] = useState<BookingResult | null>(null);
 
-  const cancelledRef = useRef(false);
-  useEffect(() => () => {
-    cancelledRef.current = true;
-  }, []);
+  // 결제 승인은 한 번만 실행한다 (StrictMode의 이중 마운트 및 재렌더로 인한 중복 호출 방지).
+  const startedRef = useRef(false);
 
   useEffect(() => {
     if (!canConfirm || !paymentKey || !orderId || !amount) return;
+    if (startedRef.current) return; // 이미 시작했으면 무시
+    startedRef.current = true;
 
     (async () => {
       try {
         const confirmed = await confirmPayment(paymentKey, orderId, Number(amount));
-        if (cancelledRef.current) return;
 
-        if (!confirmed.run_id) {
+        // 백엔드가 이미 완료(DONE)로 응답하면 폴링 없이 바로 완료 처리
+        if (confirmed.status === "DONE" || !confirmed.run_id) {
           setPhase("done");
           return;
         }
@@ -52,7 +52,6 @@ export default function PaymentResult() {
         setPhase("booking");
         const started = Date.now();
         while (Date.now() - started < POLL_TIMEOUT) {
-          if (cancelledRef.current) return;
           const run = await getRun(confirmed.run_id);
           if (run.status === "completed") {
             setBooking(run.result as BookingResult | null);
@@ -69,7 +68,6 @@ export default function PaymentResult() {
         setPhase("error");
         setMessage("예약 처리가 오래 걸리고 있습니다. 마이페이지에서 상태를 확인해 주세요.");
       } catch (e) {
-        if (cancelledRef.current) return;
         setPhase("error");
         setMessage(getApiErrorMessage(e));
       }
