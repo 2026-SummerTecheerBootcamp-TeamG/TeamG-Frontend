@@ -88,9 +88,9 @@ export default function PlanningRoom() {
       <section
         className="relative pb-5 pt-10 md:pt-14"
         style={{
-          backgroundImage: "url('/ex6.jpg')",
+          backgroundImage: "url('/ex9.jpg')",
           backgroundSize: "cover",
-          backgroundPosition: "center 90%",
+          backgroundPosition: "center 67%",
         }}
       >
         <div className="absolute inset-0 bg-white/0" />
@@ -119,7 +119,6 @@ export default function PlanningRoom() {
             isTyping={chat.isTyping}
             hideExamples={chat.isReady}
             onSend={handleSend}
-            onReset={chat.reset}
           />
 
           <div className="min-h-[620px] overflow-hidden rounded-card border border-line bg-paper shadow-[0_1px_2px_rgba(15,20,24,.04),0_18px_40px_-28px_rgba(15,20,24,.3)]">

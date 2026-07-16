@@ -58,6 +58,7 @@ export const fetchProfile = () =>
 /** PATCH /api/v1/users/me/profile 요청 바디 (수정 가능한 필드만) */
 export interface ProfileUpdatePayload {
   nickname?: string;
+  email?: string;
   nationality?: string; // ISO 3166-1 alpha-2, 예: "KR"
   default_departure?: Departure;
 }
