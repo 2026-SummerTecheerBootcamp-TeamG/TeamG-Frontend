@@ -13,7 +13,6 @@ interface Props {
   /** 슬롯이 다 차면 예시 문장을 감춘다 */
   hideExamples: boolean;
   onSend: (text: string) => void;
-  onReset: () => void;
 }
 
 export default function ChatPanel({
@@ -21,7 +20,6 @@ export default function ChatPanel({
   isTyping,
   hideExamples,
   onSend,
-  onReset,
 }: Props) {
   const [value, setValue] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
@@ -55,12 +53,6 @@ export default function ChatPanel({
           계획 만들기{" "}
           <span className="font-medium text-ink-3">· 문장으로 적어주세요</span>
         </p>
-        <button
-          onClick={onReset}
-          className=" text-[11px] text-ink-3 transition-colors hover:text-ink"
-        >
-          처음부터
-        </button>
       </div>
 
       {/* 대화 */}

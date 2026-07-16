@@ -119,7 +119,6 @@ export default function PlanningRoom() {
             isTyping={chat.isTyping}
             hideExamples={chat.isReady}
             onSend={handleSend}
-            onReset={chat.reset}
           />
 
           <div className="min-h-[620px] overflow-hidden rounded-card border border-line bg-paper shadow-[0_1px_2px_rgba(15,20,24,.04),0_18px_40px_-28px_rgba(15,20,24,.3)]">
