@@ -106,17 +106,16 @@ export function usePlan() {
    */
   const loadExisting = useCallback(async (planId: number) => {
     cancelledRef.current = false;
-    try {
-      const detail = await getPlan(planId);
-      if (cancelledRef.current) return null;
-      setPlan(detail);
-      setRequest(null); // 저장 스냅샷엔 요청 요약이 없음 (PlanSheet가 null 허용)
-      setVersion(1);
-      setStatus(detail.status === "confirmed" ? "confirmed" : "ready");
-      return detail;
-    } catch {
-      return null;
-    }
+    // 실패 시 여기서 삼키지 않고 그대로 던진다 — 호출부(PlanningRoom)가
+    // 실제 원인(로그인 만료/네트워크/404 등)을 사용자에게 보여줄 수 있게.
+    // (예전엔 catch로 null만 돌려줘서 "불러오지 못했습니다"만 보였음)
+    const detail = await getPlan(planId);
+    if (cancelledRef.current) return null;
+    setPlan(detail);
+    setRequest(null); // 저장 스냅샷엔 요청 요약이 없음 (PlanSheet가 null 허용)
+    setVersion(1);
+    setStatus(detail.status === "confirmed" ? "confirmed" : "ready");
+    return detail;
   }, []);
 
   /** 문장으로 들어온 수정 요청 */
