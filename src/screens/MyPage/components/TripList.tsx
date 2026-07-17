@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { TripSummary } from "@/types/trip";
 import { formatWon } from "@/screens/PlanningRoom/lib/parseRequest";
 
@@ -12,6 +13,8 @@ interface Props {
   /** null이면 로딩 중 */
   trips: TripSummary[] | null;
   onSelect: (planId: number) => void;
+  /** 미확정 계획 삭제 (확인 모달에서 "삭제" 선택 시 호출) */
+  onDelete: (requestId: number) => void;
 }
 
 /** 상태 배지 — 목록에서 계획의 진행 단계를 한눈에 */
@@ -36,7 +39,9 @@ function StatusBadge({ status }: { status: TripSummary["status"] }) {
 }
 
 /** 저장한 계획 목록 — 만든 계획 전부 (미확정 계획도 언제든 다시 열어 수정/확정) */
-export default function TripList({ trips, onSelect }: Props) {
+export default function TripList({ trips, onSelect, onDelete }: Props) {
+  /** 삭제 확인 모달이 열려 있는 대상 (null이면 닫힘) */
+  const [pendingDelete, setPendingDelete] = useState<TripSummary | null>(null);
   // plan이 아직 없는 요청(접수 직후 등)만 제외하고 전부 보여준다.
   // 예전엔 확정본만 노출했는데, "미확정 계획을 다시 불러 수정/확정할 수 없다"는
   // 피드백으로 전체 노출 + 상태 배지 방식으로 변경.
@@ -60,14 +65,17 @@ export default function TripList({ trips, onSelect }: Props) {
       ) : (
         <ul className="px-3 py-2">
           {visibleTrips.map((trip, i) => (
-            <li key={trip.request_id}>
-              {/* 행 전체가 하나의 클릭 영역 — 예약·결제는 "모양만" 배지 (기능 통합)
-                  행 어디를 눌러도 같은 곳(상세의 예약·결제 패널)으로 가므로
-                  버튼을 쪼갤 이유가 없다는 피드백 반영 */}
+            <li
+              key={trip.request_id}
+              className="flex items-center gap-3 border-b border-line-soft last:border-b-0"
+            >
+              {/* 왼쪽 콘텐츠 = 하나의 클릭 영역 (확정: 상세로 / 미확정: 홈에서 이어서 수정).
+                  예약·결제는 "모양만" 배지 — 행 클릭과 목적지가 같아 기능 통합.
+                  삭제 버튼만 별도 하이라이팅으로 분리 (실수 클릭 방지) */}
               <button
                 onClick={() => trip.plan_id !== null && onSelect(trip.plan_id)}
                 disabled={trip.status === "processing"}
-                className="flex w-full items-center gap-4 border-b border-line-soft px-3 py-4 text-left transition-colors last:border-b-0 hover:bg-[#f7f9fa] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-w-0 flex-1 items-center gap-4 rounded-xl px-3 py-4 text-left transition-colors hover:bg-[#f7f9fa] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span
                   className={`grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${chipColors[i % 3]} text-[13px] font-bold text-white`}
@@ -86,7 +94,7 @@ export default function TripList({ trips, onSelect }: Props) {
                   </span>
                 </span>
 
-                {/* 오른쪽 끝: [가격] [예약·결제 배지] 나란히 — 가격이 배지 왼쪽이라 눈에 잘 띔 */}
+                {/* 오른쪽 끝: [가격] [예약·결제 배지(확정만)] */}
                 <span className="flex shrink-0 items-center gap-3">
                   <span className="whitespace-nowrap font-mono text-[16px] font-extrabold tracking-[-0.02em]">
                     {formatWon(trip.total_budget)}원
@@ -98,9 +106,63 @@ export default function TripList({ trips, onSelect }: Props) {
                   )}
                 </span>
               </button>
+
+              {/* 미확정(draft)만 삭제 가능 — 예약·결제 배지와 같은 크기·위치의 빨간 버튼.
+                  왼쪽 콘텐츠와 분리된 "진짜" 버튼이라 hover 하이라이팅도 따로 됨 */}
+              {trip.status === "draft" && (
+                <button
+                  onClick={() => setPendingDelete(trip)}
+                  className="mr-3 shrink-0 whitespace-nowrap rounded-field bg-stamp px-4 py-3 text-[13px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(216,64,47,.5)] transition-all hover:-translate-y-px hover:bg-[#b93325]"
+                >
+                  삭제
+                </button>
+              )}
             </li>
           ))}
         </ul>
+      )}
+
+      {/* 삭제 확인 모달 */}
+      {pendingDelete && (
+        <div
+          className="fixed inset-0 z-[60] grid place-items-center bg-ink/45 px-5 backdrop-blur-[2px]"
+          onClick={() => setPendingDelete(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[380px] rounded-card border border-line bg-white p-6 text-center shadow-[0_24px_60px_-16px_rgba(15,20,24,.4)]"
+            style={{ fontFamily: "Pretendard, sans-serif" }}
+          >
+            <h3 className="text-[17px] font-extrabold tracking-[-0.03em]">
+              계획을 삭제하시겠습니까?
+            </h3>
+            <p className="mt-2 break-keep text-[13px] text-ink-2">
+              {pendingDelete.destinations.join(" · ")} (
+              {fmt(pendingDelete.start_date)} – {fmt(pendingDelete.end_date)})
+              <br />
+              삭제하면 되돌릴 수 없습니다.
+            </p>
+            <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => {
+                  onDelete(pendingDelete.request_id);
+                  setPendingDelete(null);
+                }}
+                className="flex-1 rounded-field bg-stamp py-2.5 text-[14px] font-bold text-white transition-colors hover:bg-[#b93325]"
+              >
+                삭제
+              </button>
+              <button
+                onClick={() => setPendingDelete(null)}
+                className="flex-1 rounded-field border border-line py-2.5 text-[14px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

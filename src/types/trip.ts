@@ -211,6 +211,8 @@ export interface PlanDetail {
   payment: PlanPayment | null;
   /** 항공 결제 완료 건 (없으면 null) — 결제 승인 시 mock 발권으로 이어짐 */
   flight_payment?: PlanPayment | null;
+  /** 저장 스냅샷으로 재구성한 대화 이력 (마이페이지에서 다시 열 때 챗 복원용) */
+  conversation?: { role: "user" | "bot"; text: string }[];
   bookings: PlanBooking[];
   created_at: string;
 }
