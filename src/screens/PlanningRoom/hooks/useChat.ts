@@ -83,6 +83,16 @@ export function useChat({ onReady, onEdit, hasPlan }: Options) {
     [push],
   );
 
+  /** 저장된 대화 이력으로 챗을 통째로 복원 (마이페이지에서 계획을 다시 열 때) */
+  const restore = useCallback(
+    (history: { role: "user" | "bot"; text: string }[]) => {
+      idRef.current = 0;
+      setMessages(history.map((m) => ({ ...m, id: `r${++idRef.current}` })));
+      setIsReady(true);   // 복원 = 이미 계획이 있는 상태이므로 예시 문장은 숨김
+    },
+    [],
+  );
+
   const reset = useCallback(() => {
     idRef.current = 0;
     pendingParseIdRef.current = null;
@@ -91,5 +101,5 @@ export function useChat({ onReady, onEdit, hasPlan }: Options) {
     setIsTyping(false);
   }, []);
 
-  return { messages, isTyping, isReady, send, notify, reset };
+  return { messages, isTyping, isReady, send, notify, restore, reset };
 }

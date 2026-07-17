@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import ProfileCard from "./components/ProfileCard";
 import TripList from "./components/TripList";
 import TripDetail from "./components/TripDetail";
-import { listTrips } from "@/api/trips";
+import { deleteTrip, listTrips } from "@/api/trips";
 import { getApiErrorMessage } from "@/lib/api";
 import type { TripSummary } from "@/types/trip";
 
@@ -38,6 +38,16 @@ export default function MyPage() {
   };
   const backToList = () => setSearchParams({});
 
+  /** 미확정 계획 삭제 — 성공하면 목록에서 즉시 제거 (재조회 없이) */
+  const handleDelete = async (requestId: number) => {
+    try {
+      await deleteTrip(requestId);
+      setTrips((prev) => prev?.filter((t) => t.request_id !== requestId) ?? null);
+    } catch (e) {
+      setError(getApiErrorMessage(e));
+    }
+  };
+
   useEffect(() => {
     listTrips()
       .then(setTrips)
@@ -70,7 +80,7 @@ export default function MyPage() {
                 {error}
               </p>
             ) : (
-              <TripList trips={trips} onSelect={selectPlan} />
+              <TripList trips={trips} onSelect={selectPlan} onDelete={handleDelete} />
             )}
           </div>
         </>

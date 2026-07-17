@@ -102,19 +102,20 @@ export function usePlan() {
   /**
    * 마이페이지에서 넘어온 기존 계획(draft)을 불러와 바로 수정 모드로 전환
    * (생성 파이프라인을 거치지 않고 저장된 스냅샷을 그대로 워크벤치에 올린다)
+   * 반환: 성공 시 PlanDetail (대화 복원 등에 사용), 실패 시 null
    */
   const loadExisting = useCallback(async (planId: number) => {
     cancelledRef.current = false;
     try {
       const detail = await getPlan(planId);
-      if (cancelledRef.current) return false;
+      if (cancelledRef.current) return null;
       setPlan(detail);
       setRequest(null); // 저장 스냅샷엔 요청 요약이 없음 (PlanSheet가 null 허용)
       setVersion(1);
       setStatus(detail.status === "confirmed" ? "confirmed" : "ready");
-      return true;
+      return detail;
     } catch {
-      return false;
+      return null;
     }
   }, []);
 

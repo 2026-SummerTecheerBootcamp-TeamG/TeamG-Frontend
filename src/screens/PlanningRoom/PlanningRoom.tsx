@@ -29,12 +29,18 @@ export default function PlanningRoom() {
     const planParam = searchParams.get("plan");
     if (!planParam || loadedPlanRef.current) return;
     loadedPlanRef.current = true;
-    loadExisting(Number(planParam)).then((ok) => {
-      chat.notify(
-        ok
-          ? "저장된 계획을 불러왔습니다. 원하는 수정을 문장으로 적어주세요.\n예: “2일차는 좀 여유롭게 해줘”"
-          : "계획을 불러오지 못했습니다. 마이페이지에서 다시 시도해 주세요.",
-      );
+    loadExisting(Number(planParam)).then((detail) => {
+      if (detail) {
+        // 저장 스냅샷으로 재구성된 대화가 있으면 챗에 통째로 복원
+        if (detail.conversation?.length) {
+          chat.restore(detail.conversation);
+        }
+        chat.notify(
+          "저장된 계획을 불러왔습니다. 이어서 수정 요청을 적어주세요.\n예: “2일차는 좀 여유롭게 해줘”",
+        );
+      } else {
+        chat.notify("계획을 불러오지 못했습니다. 마이페이지에서 다시 시도해 주세요.");
+      }
       // 주소를 "/"로 정리 - 이후 새 계획을 만들 때 옛 plan 파라미터가 남지 않게
       setSearchParams({}, { replace: true });
     });
