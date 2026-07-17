@@ -60,15 +60,14 @@ export default function TripList({ trips, onSelect }: Props) {
       ) : (
         <ul className="px-3 py-2">
           {visibleTrips.map((trip, i) => (
-            <li
-              key={trip.request_id}
-              className="flex items-center gap-3 border-b border-line-soft px-3 py-4 last:border-b-0"
-            >
-              {/* 왼쪽: 계획 정보 영역 (클릭 = 상세/수정으로) */}
+            <li key={trip.request_id}>
+              {/* 행 전체가 하나의 클릭 영역 — 예약·결제는 "모양만" 배지 (기능 통합)
+                  행 어디를 눌러도 같은 곳(상세의 예약·결제 패널)으로 가므로
+                  버튼을 쪼갤 이유가 없다는 피드백 반영 */}
               <button
                 onClick={() => trip.plan_id !== null && onSelect(trip.plan_id)}
                 disabled={trip.status === "processing"}
-                className="flex min-w-0 flex-1 items-center gap-4 rounded-xl text-left transition-colors hover:bg-[#f7f9fa] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center gap-4 border-b border-line-soft px-3 py-4 text-left transition-colors last:border-b-0 hover:bg-[#f7f9fa] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span
                   className={`grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${chipColors[i % 3]} text-[13px] font-bold text-white`}
@@ -85,21 +84,20 @@ export default function TripList({ trips, onSelect }: Props) {
                   <span className="mt-1 block font-mono text-[11.5px] text-ink-3">
                     {fmt(trip.start_date)} – {fmt(trip.end_date)} · {trip.departure} 출발
                   </span>
-                  <span className="mt-1 block font-mono text-[16px] font-extrabold tracking-[-0.02em]">
+                </span>
+
+                {/* 오른쪽 끝: [가격] [예약·결제 배지] 나란히 — 가격이 배지 왼쪽이라 눈에 잘 띔 */}
+                <span className="flex shrink-0 items-center gap-3">
+                  <span className="whitespace-nowrap font-mono text-[16px] font-extrabold tracking-[-0.02em]">
                     {formatWon(trip.total_budget)}원
                   </span>
+                  {trip.status === "confirmed" && (
+                    <span className="whitespace-nowrap rounded-field bg-cobalt px-4 py-3 text-[13px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)]">
+                      예약·결제 →
+                    </span>
+                  )}
                 </span>
               </button>
-
-              {/* 오른쪽: 확정 계획 전용 예약·결제 버튼 — 정보 영역과 분리된 "진짜" 버튼 */}
-              {trip.status === "confirmed" && trip.plan_id !== null && (
-                <button
-                  onClick={() => onSelect(trip.plan_id!)}
-                  className="shrink-0 whitespace-nowrap rounded-field bg-cobalt px-4 py-3 text-[13px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)] transition-all hover:-translate-y-px hover:bg-[#1c36c4]"
-                >
-                  예약·결제 →
-                </button>
-              )}
             </li>
           ))}
         </ul>
