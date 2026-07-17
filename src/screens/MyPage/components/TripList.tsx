@@ -69,9 +69,7 @@ export default function TripList({ trips, onSelect, onDelete }: Props) {
               key={trip.request_id}
               className="flex items-center gap-3 border-b border-line-soft last:border-b-0"
             >
-              {/* 왼쪽 콘텐츠 = 하나의 클릭 영역 (확정: 상세로 / 미확정: 홈에서 이어서 수정).
-                  예약·결제는 "모양만" 배지 — 행 클릭과 목적지가 같아 기능 통합.
-                  삭제 버튼만 별도 하이라이팅으로 분리 (실수 클릭 방지) */}
+              {/* 왼쪽 콘텐츠 = 하나의 클릭 영역 (확정: 상세로 / 미확정: 홈에서 이어서 수정) */}
               <button
                 onClick={() => trip.plan_id !== null && onSelect(trip.plan_id)}
                 disabled={trip.status === "processing"}
@@ -94,25 +92,27 @@ export default function TripList({ trips, onSelect, onDelete }: Props) {
                   </span>
                 </span>
 
-                {/* 오른쪽 끝: [가격] [예약·결제 배지(확정만)] */}
-                <span className="flex shrink-0 items-center gap-3">
-                  <span className="whitespace-nowrap font-mono text-[16px] font-extrabold tracking-[-0.02em]">
-                    {formatWon(trip.total_budget)}원
-                  </span>
-                  {trip.status === "confirmed" && (
-                    <span className="whitespace-nowrap rounded-field bg-cobalt px-4 py-3 text-[13px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)]">
-                      예약·결제 →
-                    </span>
-                  )}
+                {/* 오른쪽 끝: 가격만 — 버튼은 행 밖의 공통 슬롯으로 (가격↔버튼 간격 통일) */}
+                <span className="shrink-0 whitespace-nowrap font-mono text-[16px] font-extrabold tracking-[-0.02em]">
+                  {formatWon(trip.total_budget)}원
                 </span>
               </button>
 
-              {/* 미확정(draft)만 삭제 가능 — 예약·결제 배지와 같은 크기·위치의 빨간 버튼.
-                  왼쪽 콘텐츠와 분리된 "진짜" 버튼이라 hover 하이라이팅도 따로 됨 */}
+              {/* 오른쪽 공통 버튼 슬롯 — 확정: 예약·결제(파랑, 행 클릭과 같은 동작) /
+                  미확정: 삭제(빨강, 확인 모달). 같은 자리·같은 크기(112px)라
+                  어느 행이든 가격과 버튼 사이 간격이 항상 동일 */}
+              {trip.status === "confirmed" && trip.plan_id !== null && (
+                <button
+                  onClick={() => onSelect(trip.plan_id!)}
+                  className="mr-3 w-[112px] shrink-0 whitespace-nowrap rounded-field bg-cobalt py-3 text-center text-[13px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)] transition-all hover:-translate-y-px hover:bg-[#1c36c4]"
+                >
+                  예약·결제 →
+                </button>
+              )}
               {trip.status === "draft" && (
                 <button
                   onClick={() => setPendingDelete(trip)}
-                  className="mr-3 shrink-0 whitespace-nowrap rounded-field bg-stamp px-4 py-3 text-[13px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(216,64,47,.5)] transition-all hover:-translate-y-px hover:bg-[#b93325]"
+                  className="mr-3 w-[112px] shrink-0 whitespace-nowrap rounded-field bg-stamp py-3 text-center text-[13px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(216,64,47,.5)] transition-all hover:-translate-y-px hover:bg-[#b93325]"
                 >
                   삭제
                 </button>
@@ -144,7 +144,14 @@ export default function TripList({ trips, onSelect, onDelete }: Props) {
               <br />
               삭제하면 되돌릴 수 없습니다.
             </p>
+            {/* 취소 왼쪽 / 삭제 오른쪽 — 파괴적 동작은 오른쪽에 두는 관례 (피드백 반영) */}
             <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => setPendingDelete(null)}
+                className="flex-1 rounded-field border border-line py-2.5 text-[14px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
+              >
+                취소
+              </button>
               <button
                 onClick={() => {
                   onDelete(pendingDelete.request_id);
@@ -153,12 +160,6 @@ export default function TripList({ trips, onSelect, onDelete }: Props) {
                 className="flex-1 rounded-field bg-stamp py-2.5 text-[14px] font-bold text-white transition-colors hover:bg-[#b93325]"
               >
                 삭제
-              </button>
-              <button
-                onClick={() => setPendingDelete(null)}
-                className="flex-1 rounded-field border border-line py-2.5 text-[14px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
-              >
-                취소
               </button>
             </div>
           </div>
