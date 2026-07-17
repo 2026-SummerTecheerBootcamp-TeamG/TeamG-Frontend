@@ -7,6 +7,7 @@ import PlanProgress from "./components/PlanProgress";
 import PlanSheet from "./components/PlanSheet";
 import { useChat } from "./hooks/useChat";
 import { usePlan } from "./hooks/usePlan";
+import { getApiErrorMessage } from "@/lib/api";
 import { formatWon } from "./lib/parseRequest";
 
 export default function PlanningRoom() {
@@ -24,20 +25,44 @@ export default function PlanningRoom() {
 
   /** 마이페이지에서 "?plan=8"로 넘어온 경우: 저장된 계획을 불러와 수정 모드로 시작 */
   const [searchParams, setSearchParams] = useSearchParams();
-  const loadedPlanRef = useRef(false); // StrictMode 이중 실행/재렌더 시 중복 로드 방지
+  const loadedPlanRef = useRef(false);      // 같은 실행 사이클 안의 중복 요청 방지
+  const restoredPlanRef = useRef<number | null>(null); // 대화 복원/안내는 계획당 1번만
   useEffect(() => {
     const planParam = searchParams.get("plan");
     if (!planParam || loadedPlanRef.current) return;
     loadedPlanRef.current = true;
-    loadExisting(Number(planParam)).then((ok) => {
-      chat.notify(
-        ok
-          ? "저장된 계획을 불러왔습니다. 원하는 수정을 문장으로 적어주세요.\n예: “2일차는 좀 여유롭게 해줘”"
-          : "계획을 불러오지 못했습니다. 마이페이지에서 다시 시도해 주세요.",
-      );
-      // 주소를 "/"로 정리 - 이후 새 계획을 만들 때 옛 plan 파라미터가 남지 않게
-      setSearchParams({}, { replace: true });
-    });
+    loadExisting(Number(planParam))
+      .then((detail) => {
+        if (!detail) return; // 언마운트로 취소된 경우 (조용히 종료가 정상)
+        // StrictMode(개발 모드)는 effect가 2번 돌아 응답도 2번 올 수 있다 —
+        // 복원·안내가 두 번 찍히지 않게 계획 ID 기준으로 1번만
+        if (restoredPlanRef.current === detail.plan_id) return;
+        restoredPlanRef.current = detail.plan_id;
+        // 저장 스냅샷으로 재구성된 대화가 있으면 챗에 통째로 복원
+        if (detail.conversation?.length) {
+          chat.restore(detail.conversation);
+        }
+        chat.notify(
+          "저장된 계획을 불러왔습니다. 이어서 수정 요청을 적어주세요.\n예: “2일차는 좀 여유롭게 해줘”",
+        );
+      })
+      .catch((e) => {
+        // 실제 원인을 문구에 포함 — "왜" 실패했는지 사용자가 알 수 있게
+        console.error("계획 불러오기 실패:", e);
+        chat.notify(`계획을 불러오지 못했습니다. (${getApiErrorMessage(e)})`);
+      })
+      .finally(() => {
+        // 주소를 "/"로 정리 - 이후 새 계획을 만들 때 옛 plan 파라미터가 남지 않게
+        setSearchParams({}, { replace: true });
+      });
+    // ⭐ StrictMode 대응: 개발 모드는 effect를 실행→정리→재실행한다.
+    // 정리 때 usePlan의 cancelled 플래그가 켜져 1차 응답이 버려지므로,
+    // 가드도 함께 풀어서 2차 실행이 처음부터 다시 불러오게 한다.
+    // (이게 없으면 로컬에서만 "아무 일도 안 일어나는" 유령 실패가 남 —
+    //  실서비스 빌드는 effect가 1번만 돌아서 애초에 문제없음)
+    return () => {
+      loadedPlanRef.current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 

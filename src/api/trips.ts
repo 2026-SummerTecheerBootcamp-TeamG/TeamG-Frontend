@@ -58,6 +58,10 @@ export const ticketFlight = (planId: number) =>
 export const getPlan = (planId: number) =>
   api.get<PlanDetail>(`/trips/plans/${planId}`).then((res) => res.data);
 
+/** DELETE /api/v1/trips/{request_id} - 미확정 계획 삭제 (확정본은 서버가 400으로 거절) */
+export const deleteTrip = (requestId: number) =>
+  api.delete(`/trips/${requestId}`).then(() => undefined);
+
 interface PlanConfirmResponse {
   plan_id: number;
   status: "confirmed";

@@ -102,20 +102,20 @@ export function usePlan() {
   /**
    * 마이페이지에서 넘어온 기존 계획(draft)을 불러와 바로 수정 모드로 전환
    * (생성 파이프라인을 거치지 않고 저장된 스냅샷을 그대로 워크벤치에 올린다)
+   * 반환: 성공 시 PlanDetail (대화 복원 등에 사용), 실패 시 null
    */
   const loadExisting = useCallback(async (planId: number) => {
     cancelledRef.current = false;
-    try {
-      const detail = await getPlan(planId);
-      if (cancelledRef.current) return false;
-      setPlan(detail);
-      setRequest(null); // 저장 스냅샷엔 요청 요약이 없음 (PlanSheet가 null 허용)
-      setVersion(1);
-      setStatus(detail.status === "confirmed" ? "confirmed" : "ready");
-      return true;
-    } catch {
-      return false;
-    }
+    // 실패 시 여기서 삼키지 않고 그대로 던진다 — 호출부(PlanningRoom)가
+    // 실제 원인(로그인 만료/네트워크/404 등)을 사용자에게 보여줄 수 있게.
+    // (예전엔 catch로 null만 돌려줘서 "불러오지 못했습니다"만 보였음)
+    const detail = await getPlan(planId);
+    if (cancelledRef.current) return null;
+    setPlan(detail);
+    setRequest(null); // 저장 스냅샷엔 요청 요약이 없음 (PlanSheet가 null 허용)
+    setVersion(1);
+    setStatus(detail.status === "confirmed" ? "confirmed" : "ready");
+    return detail;
   }, []);
 
   /** 문장으로 들어온 수정 요청 */
