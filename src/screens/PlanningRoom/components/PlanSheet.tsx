@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RouteMap from "./RouteMap";
 import type { ParsedFields, PlanDetail, PlanStatus } from "@/types/trip";
 import { preparePayment } from "@/api/payments";
@@ -39,36 +39,6 @@ const formatDuration = (min: number) => {
   const m = min % 60;
   return h > 0 ? `${h}시간${m > 0 ? ` ${m}분` : ""}` : `${m}분`;
 };
-
-/** narrative(마크다운)를 "## Day N" 헤더 기준으로 잘라 DAY별 설명 텍스트만 뽑아낸다 */
-function splitNarrativeByDay(narrative: string): Map<number, string> {
-  const result = new Map<number, string>();
-  const headerRe = /##\s*Day\s*(\d+)[^\n]*\n/g;
-  const matches = [...narrative.matchAll(headerRe)];
-
-  matches.forEach((m, idx) => {
-    const dayNumber = Number(m[1]);
-    const start = m.index! + m[0].length;
-    const end = idx + 1 < matches.length ? matches[idx + 1].index! : narrative.length;
-    const text = narrative.slice(start, end).replace(/^-+\s*$/gm, "").trim();
-    if (text) result.set(dayNumber, text);
-  });
-
-  return result;
-}
-
-/** "**text**" 마크다운 굵게 표시만 최소 처리해서 렌더링한다 (마크다운 라이브러리 없이) */
-function renderBoldText(text: string) {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((chunk, i) =>
-    chunk.startsWith("**") && chunk.endsWith("**") ? (
-      <strong key={i} className="font-semibold text-ink">
-        {chunk.slice(2, -2)}
-      </strong>
-    ) : (
-      chunk
-    ),
-  );
-}
 
 export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
   const { allocation: al, flight, hotel, days, payment, bookings, start_date, end_date } = plan;
@@ -111,21 +81,6 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
       document.getElementById("booking-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
   };
-  /** DAY별 설명 접기/펼치기 */
-  const narrativeByDay = useMemo(
-    () => (plan.narrative ? splitNarrativeByDay(plan.narrative) : new Map<number, string>()),
-    [plan.narrative],
-  );
-  const [openDays, setOpenDays] = useState<Set<number>>(new Set());
-  const toggleDay = (dayNumber: number) => {
-    setOpenDays((prev) => {
-      const next = new Set(prev);
-      if (next.has(dayNumber)) next.delete(dayNumber);
-      else next.add(dayNumber);
-      return next;
-    });
-  };
-
   /**
    * 확정된 플랜 결제: 서버가 금액을 정하고(prepare) 토스 결제창을 연다.
    * target=hotel  → 결제 승인 시 숙소 예약(LiteAPI 샌드박스) 자동 진행
@@ -679,29 +634,6 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
 
               )}
             </div>
-
-            {narrativeByDay.has(day.day_number) && (
-              <div className="mb-3.5">
-                <button
-                  onClick={() => toggleDay(day.day_number)}
-                  className="flex w-full items-center gap-1.5 rounded-lg border border-line-soft bg-[#fcfdfd] px-3 py-2 text-left text-[12.5px] font-semibold text-ink-2 transition-colors hover:border-ink-3"
-                >
-                  <span
-                    className={`inline-block text-[10px] text-ink-3 transition-transform ${
-                      openDays.has(day.day_number) ? "rotate-90" : ""
-                    }`}
-                  >
-                    ▶
-                  </span>
-                  일정 설명 {openDays.has(day.day_number) ? "접기" : "펼쳐보기"}
-                </button>
-                {openDays.has(day.day_number) && (
-                  <div className="mt-2 whitespace-pre-line rounded-lg bg-[#fcfdfd] px-3.5 py-3 text-[13px] leading-relaxed text-ink-2">
-                    {renderBoldText(narrativeByDay.get(day.day_number)!)}
-                  </div>
-                )}
-              </div>
-            )}
 
             <div className="relative pl-[34px]">
               {/* 세로선 */}
