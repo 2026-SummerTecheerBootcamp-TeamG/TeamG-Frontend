@@ -4,7 +4,7 @@ import type { ParsedFields, PlanDetail, PlanStatus } from "@/types/trip";
 import { preparePayment } from "@/api/payments";
 import { getApiErrorMessage } from "@/lib/api";
 import { loadTossPayments } from "@/lib/tossPayments";
-import { formatWon } from "../lib/parseRequest";
+import { formatWon, getNightsFromDates } from "../lib/parseRequest";
 
 interface Props {
   plan: PlanDetail;
@@ -71,7 +71,7 @@ function renderBoldText(text: string) {
 }
 
 export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
-  const { allocation: al, flight, hotel, days, payment, bookings } = plan;
+  const { allocation: al, flight, hotel, days, payment, bookings, start_date, end_date } = plan;
   /** 항공 결제 완료 건 (숙소 결제 payment와 별도) */
   const flightPayment = plan.flight_payment ?? null;
   /** 재시도 이력까지 시간순으로 들어있으니 종류별 마지막(최근) 건 기준으로 표시
@@ -165,7 +165,9 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
   const cities = days.length > 0
     ? Array.from(new Set(days.map((d) => d.city_name).filter(Boolean))).join(" · ")
     : request?.destinations.map((d) => d.city).join(" · ");
-  const nights = Math.max(0, days.length - 1);
+  /** days 배열은 귀국일이 빠진 "일정이 있는 날"만 담고 있어 길이로 박수를 셀 수 없다(Bug#96) —
+      plan의 실제 시작/종료일로 계산한다 */
+  const nights = getNightsFromDates(start_date, end_date) ?? Math.max(0, days.length - 1);
   const pax = request ? request.pax.adult + request.pax.child : null;
 
   const budgetAl = al && (al.status === "fit" || al.status === "insufficient") ? al : null;
