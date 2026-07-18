@@ -14,7 +14,7 @@ export default function PlanningRoom() {
   const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
 
-  const { plan, request, status, step, version, error, start, loadExisting, editWithMessage, confirm } =
+  const { plan, request, status, step, progress, version, error, start, loadExisting, editWithMessage, confirm } =
     usePlan();
 
   const chat = useChat({
@@ -162,7 +162,7 @@ export default function PlanningRoom() {
               </div>
             )}
 
-            {status === "building" && <PlanProgress current={step} />}
+            {status === "building" && <PlanProgress current={step} progress={progress} />}
 
             {status === "error" && (
               <div className="grid h-[620px] place-items-center px-8 text-center">
