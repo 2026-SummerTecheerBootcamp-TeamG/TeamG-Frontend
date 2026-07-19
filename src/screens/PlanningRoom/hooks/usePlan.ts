@@ -78,6 +78,7 @@ export function usePlan() {
       setStatus("building");
       setError(null);
       setStep(0);
+      setProgress(0);   // 진행률 막대도 처음부터
       setVersion(1);
       setRequest(fields);
 
@@ -159,6 +160,22 @@ export function usePlan() {
     [plan, pollRun],
   );
 
+  /**
+   * "계획 다시 짜기": 화면 상태만 초기화한다.
+   * 짜던 계획은 서버에 draft로 이미 저장돼 있으므로 지울 것이 없다 —
+   * 마이페이지 목록에 그대로 남아 언제든 이어서 수정/확정 가능.
+   */
+  const resetPlan = useCallback(() => {
+    cancelledRef.current = false;
+    setPlan(null);
+    setRequest(null);
+    setStatus("idle");
+    setStep(0);
+    setProgress(0);
+    setVersion(1);
+    setError(null);
+  }, []);
+
   /** 계획 확정 */
   const confirm = useCallback(async () => {
     if (!plan) return false;
@@ -171,7 +188,8 @@ export function usePlan() {
     }
   }, [plan]);
 
-  return { plan, request, status, step, progress, version, error, start, loadExisting, editWithMessage, confirm };
+  // 병합: 팀원의 progress(진행률 %) + 우리의 resetPlan(계획 다시 짜기) 모두 노출
+  return { plan, request, status, step, progress, version, error, start, loadExisting, editWithMessage, confirm, resetPlan };
 }
 
 /**

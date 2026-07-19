@@ -14,7 +14,7 @@ export default function PlanningRoom() {
   const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
 
-  const { plan, request, status, step, progress, version, error, start, loadExisting, editWithMessage, confirm } =
+  const { plan, request, status, step, progress, version, error, start, loadExisting, editWithMessage, confirm, resetPlan } =
     usePlan();
 
   const chat = useChat({
@@ -66,6 +66,16 @@ export default function PlanningRoom() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  /** 수정 완료(버전 증가) 시 계획서를 맨 위로 스크롤 — 바뀐 내용의 시작부터 보이게 */
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const prevVersionRef = useRef(version);
+  useEffect(() => {
+    if (version > prevVersionRef.current) {
+      sheetRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    prevVersionRef.current = version;
+  }, [version]);
+
   /** 계획 생성/실패를 챗 쪽에 알린다 */
   const notifiedStatusRef = useRef<string | null>(null);
   useEffect(() => {
@@ -82,6 +92,18 @@ export default function PlanningRoom() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, version, error]);
+
+  /**
+   * "계획 다시 짜기": 챗과 오른쪽 화면을 초기 상태로.
+   * 짜던 계획은 이미 draft로 저장돼 있어 마이페이지 목록에 그대로 남는다.
+   */
+  const handleRestart = () => {
+    chat.reset();
+    resetPlan();
+    notifiedStatusRef.current = null;   // 다음 계획의 완료 안내가 다시 뜨도록
+    restoredPlanRef.current = null;     // 다음 불러오기의 대화 복원이 다시 되도록
+    chat.notify("새 계획을 시작합니다. 이전 계획은 마이페이지에 저장되어 있어요.");
+  };
 
   /** 계획 생성: 로그인 안 했으면 로그인 화면으로 보낸다 */
   const handleSend = (text: string) => {
@@ -144,9 +166,14 @@ export default function PlanningRoom() {
             isTyping={chat.isTyping}
             hideExamples={chat.isReady}
             onSend={handleSend}
+            // 초기 화면에서는 다시 짤 것이 없으므로 버튼 숨김
+            onRestart={status !== "idle" ? handleRestart : undefined}
           />
 
-          <div className="min-h-[620px] overflow-hidden rounded-card border border-line bg-paper shadow-[0_1px_2px_rgba(15,20,24,.04),0_18px_40px_-28px_rgba(15,20,24,.3)]">
+          <div
+            ref={sheetRef}
+            className="min-h-[620px] scroll-mt-20 overflow-hidden rounded-card border border-line bg-paper shadow-[0_1px_2px_rgba(15,20,24,.04),0_18px_40px_-28px_rgba(15,20,24,.3)]"
+          >
             {status === "idle" && (
               <div className="grid h-[620px] place-items-center px-8 text-center">
                 <div className="max-w-[330px]">
