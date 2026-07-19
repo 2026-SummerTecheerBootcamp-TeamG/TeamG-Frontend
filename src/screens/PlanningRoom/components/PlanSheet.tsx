@@ -40,6 +40,36 @@ const formatDuration = (min: number) => {
   return h > 0 ? `${h}시간${m > 0 ? ` ${m}분` : ""}` : `${m}분`;
 };
 
+/** 예산 바의 한 구간 — hover 시 살짝 부풀고, 항목·금액·비율 툴팁을 띄운다 */
+function BarSegment({
+  label,
+  amount,
+  percent,
+  color,
+}: {
+  label: string;
+  amount: string;
+  percent: number;
+  color: string;
+}) {
+  return (
+    <span
+      className="group relative flex cursor-default items-center"
+      style={{ width: `${percent}%` }}
+    >
+      {/* 색 막대 — hover 시 두께가 커지며 살짝 떠오른다 */}
+      <span
+        className={`block h-2.5 w-full rounded-sm transition-all duration-200 group-hover:h-4 group-hover:shadow-[0_2px_8px_-2px_rgba(15,20,24,.35)] ${color}`}
+      />
+
+      {/* 툴팁 */}
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2.5 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[11.5px] font-semibold text-white opacity-0 shadow-lg transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+        {label} {amount}원 · {percent}%
+        <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-4 border-t-4 border-x-transparent border-t-ink" />
+      </span>
+    </span>
+  );
+}
 export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
   const { allocation: al, flight, hotel, days, payment, bookings, start_date, end_date } = plan;
   /** 항공 결제 완료 건 (숙소 결제 payment와 별도) */
@@ -248,23 +278,31 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
             {/* 예비비 개념 폐지 — 총예산 전액이 곧 사용 가능 예산.
                 (옛 계획 스냅샷에 reserve 값이 남아 있어도 이제 표시하지 않는다) */}
 
-            <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-md bg-[#edf0f3]">
-              <span
-                className="block rounded-sm bg-cobalt transition-[width] duration-700"
-                style={{ width: `${ratio(budgetAl.breakdown.flight_krw, barDenom)}%` }}
+<div className="flex h-4 items-center gap-0.5 rounded-md">
+              <BarSegment
+                label="항공"
+                amount={formatWon(budgetAl.breakdown.flight_krw)}
+                percent={ratio(budgetAl.breakdown.flight_krw, barDenom)}
+                color="bg-cobalt"
               />
-              <span
-                className="block rounded-sm bg-teal transition-[width] duration-700"
-                style={{ width: `${ratio(budgetAl.breakdown.hotel_krw, barDenom)}%` }}
+              <BarSegment
+                label="숙소"
+                amount={formatWon(budgetAl.breakdown.hotel_krw)}
+                percent={ratio(budgetAl.breakdown.hotel_krw, barDenom)}
+                color="bg-teal"
               />
-              <span
-                className="block rounded-sm bg-amber transition-[width] duration-700"
-                style={{ width: `${ratio(budgetAl.breakdown.activity_krw, barDenom)}%` }}
+              <BarSegment
+                label="일정"
+                amount={formatWon(budgetAl.breakdown.activity_krw)}
+                percent={ratio(budgetAl.breakdown.activity_krw, barDenom)}
+                color="bg-amber"
               />
               {budgetAl.status === "fit" && remaining > 0 && (
-                <span
-                  className="block rounded-sm bg-[#d7dce1] transition-[width] duration-700"
-                  style={{ width: `${ratio(remaining, barDenom)}%` }}
+                <BarSegment
+                  label="남음"
+                  amount={formatWon(remaining)}
+                  percent={ratio(remaining, barDenom)}
+                  color="bg-[#d7dce1]"
                 />
               )}
             </div>
