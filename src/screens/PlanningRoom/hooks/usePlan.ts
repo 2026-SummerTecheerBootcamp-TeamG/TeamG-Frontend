@@ -44,6 +44,7 @@ export function usePlan() {
   const [request, setRequest] = useState<ParsedFields | null>(null);
   const [status, setStatus] = useState<PlanStatus>("idle");
   const [step, setStep] = useState(0);
+  const [progress, setProgress] = useState(0);
   const [version, setVersion] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,7 +60,9 @@ export function usePlan() {
     while (Date.now() - started < POLL_TIMEOUT) {
       if (token.cancelled) return null;
       const detail = await getRun(runId);
-      setStep(stepFromEvents(detail.events)); // 진짜 진행률 (trace 이벤트 기반)
+      const nextStep = stepFromEvents(detail.events); // 진짜 진행률 (trace 이벤트 기반)
+      setStep(nextStep);
+      setProgress((prev) => Math.max(prev, progressFromEvents(detail.events, nextStep)));
       if (detail.status === "completed") return detail.result;
       if (detail.status === "failed") throw new Error("계획 생성에 실패했습니다.");
       await sleep(POLL_INTERVAL);
@@ -75,6 +78,7 @@ export function usePlan() {
       setStatus("building");
       setError(null);
       setStep(0);
+      setProgress(0);   // 진행률 막대도 처음부터
       setVersion(1);
       setRequest(fields);
 
@@ -167,6 +171,7 @@ export function usePlan() {
     setRequest(null);
     setStatus("idle");
     setStep(0);
+    setProgress(0);
     setVersion(1);
     setError(null);
   }, []);
@@ -183,5 +188,35 @@ export function usePlan() {
     }
   }, [plan]);
 
-  return { plan, request, status, step, version, error, start, loadExisting, editWithMessage, confirm, resetPlan };
+  // 병합: 팀원의 progress(진행률 %) + 우리의 resetPlan(계획 다시 짜기) 모두 노출
+  return { plan, request, status, step, progress, version, error, start, loadExisting, editWithMessage, confirm, resetPlan };
+}
+
+/**
+ * 실제 trace 이벤트로 진행률(0~100)을 계산한다.
+ * 단계 안에서도 이벤트가 쌓일수록 조금씩 올라가 막대가 멈춰 보이지 않게 한다.
+ * 타이머 연출이 아니라 전부 실제 이벤트 기반.
+ */
+const STEP_RANGE = [
+  { base: 0, cap: 12 },
+  { base: 12, cap: 55 },
+  { base: 55, cap: 65 },
+  { base: 65, cap: 88 },
+  { base: 88, cap: 99 },
+];
+
+function progressFromEvents(events: TraceEvent[] | undefined, step: number): number {
+  const range = STEP_RANGE[Math.min(step, STEP_RANGE.length - 1)];
+  const span = range.cap - range.base;
+  const list = events ?? [];
+  const stepEventCount = list.filter((e) => {
+    const a = e.action ?? "";
+    if (step >= 4) return e.kind === "done" || a.includes("저장");
+    if (step === 3) return a.includes("일정") || a.includes("내러티브");
+    if (step === 2) return a.includes("배분");
+    if (step === 1) return e.kind === "api" || e.kind === "llm" || e.kind === "data";
+    return true;
+  }).length;
+  const filled = 1 - Math.pow(0.75, stepEventCount);
+  return Math.round(range.base + span * filled);
 }

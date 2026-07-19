@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PlanDetailModal from "./PlanDetailModal";
 import RouteMap from "./RouteMap";
@@ -6,7 +6,7 @@ import type { ParsedFields, PlanDetail, PlanStatus } from "@/types/trip";
 import { preparePayment } from "@/api/payments";
 import { getApiErrorMessage } from "@/lib/api";
 import { loadTossPayments } from "@/lib/tossPayments";
-import { formatWon } from "../lib/parseRequest";
+import { formatWon, getNightsFromDates } from "../lib/parseRequest";
 
 interface Props {
   plan: PlanDetail;
@@ -42,38 +42,38 @@ const formatDuration = (min: number) => {
   return h > 0 ? `${h}시간${m > 0 ? ` ${m}분` : ""}` : `${m}분`;
 };
 
-/** narrative(마크다운)를 "## Day N" 헤더 기준으로 잘라 DAY별 설명 텍스트만 뽑아낸다 */
-function splitNarrativeByDay(narrative: string): Map<number, string> {
-  const result = new Map<number, string>();
-  const headerRe = /##\s*Day\s*(\d+)[^\n]*\n/g;
-  const matches = [...narrative.matchAll(headerRe)];
+/** 예산 바의 한 구간 — hover 시 살짝 부풀고, 항목·금액·비율 툴팁을 띄운다 */
+function BarSegment({
+  label,
+  amount,
+  percent,
+  color,
+}: {
+  label: string;
+  amount: string;
+  percent: number;
+  color: string;
+}) {
+  return (
+    <span
+      className="group relative flex cursor-default items-center"
+      style={{ width: `${percent}%` }}
+    >
+      {/* 색 막대 — hover 시 두께가 커지며 살짝 떠오른다 */}
+      <span
+        className={`block h-2.5 w-full rounded-sm transition-all duration-200 group-hover:h-4 group-hover:shadow-[0_2px_8px_-2px_rgba(15,20,24,.35)] ${color}`}
+      />
 
-  matches.forEach((m, idx) => {
-    const dayNumber = Number(m[1]);
-    const start = m.index! + m[0].length;
-    const end = idx + 1 < matches.length ? matches[idx + 1].index! : narrative.length;
-    const text = narrative.slice(start, end).replace(/^-+\s*$/gm, "").trim();
-    if (text) result.set(dayNumber, text);
-  });
-
-  return result;
-}
-
-/** "**text**" 마크다운 굵게 표시만 최소 처리해서 렌더링한다 (마크다운 라이브러리 없이) */
-function renderBoldText(text: string) {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((chunk, i) =>
-    chunk.startsWith("**") && chunk.endsWith("**") ? (
-      <strong key={i} className="font-semibold text-ink">
-        {chunk.slice(2, -2)}
-      </strong>
-    ) : (
-      chunk
-    ),
+      {/* 툴팁 */}
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2.5 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[11.5px] font-semibold text-white opacity-0 shadow-lg transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+        {label} {amount}원 · {percent}%
+        <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-4 border-t-4 border-x-transparent border-t-ink" />
+      </span>
+    </span>
   );
 }
-
 export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
-  const { allocation: al, flight, hotel, days, payment, bookings } = plan;
+  const { allocation: al, flight, hotel, days, payment, bookings, start_date, end_date } = plan;
   /** 항공 결제 완료 건 (숙소 결제 payment와 별도) */
   const flightPayment = plan.flight_payment ?? null;
   /** 재시도 이력까지 시간순으로 들어있으니 종류별 마지막(최근) 건 기준으로 표시
@@ -115,21 +115,6 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
     setModalOpen(false);
     navigate(`/mypage?plan=${plan.plan_id}`);
   };
-  /** DAY별 설명 접기/펼치기 */
-  const narrativeByDay = useMemo(
-    () => (plan.narrative ? splitNarrativeByDay(plan.narrative) : new Map<number, string>()),
-    [plan.narrative],
-  );
-  const [openDays, setOpenDays] = useState<Set<number>>(new Set());
-  const toggleDay = (dayNumber: number) => {
-    setOpenDays((prev) => {
-      const next = new Set(prev);
-      if (next.has(dayNumber)) next.delete(dayNumber);
-      else next.add(dayNumber);
-      return next;
-    });
-  };
-
   /**
    * 확정된 플랜 결제: 서버가 금액을 정하고(prepare) 토스 결제창을 연다.
    * target=hotel  → 결제 승인 시 숙소 예약(LiteAPI 샌드박스) 자동 진행
@@ -169,7 +154,9 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
   const cities = days.length > 0
     ? Array.from(new Set(days.map((d) => d.city_name).filter(Boolean))).join(" · ")
     : request?.destinations.map((d) => d.city).join(" · ");
-  const nights = Math.max(0, days.length - 1);
+  /** days 배열은 귀국일이 빠진 "일정이 있는 날"만 담고 있어 길이로 박수를 셀 수 없다(Bug#96) —
+      plan의 실제 시작/종료일로 계산한다 */
+  const nights = getNightsFromDates(start_date, end_date) ?? Math.max(0, days.length - 1);
   const pax = request ? request.pax.adult + request.pax.child : null;
 
   const budgetAl = al && (al.status === "fit" || al.status === "insufficient") ? al : null;
@@ -295,23 +282,31 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
             {/* 예비비 개념 폐지 — 총예산 전액이 곧 사용 가능 예산.
                 (옛 계획 스냅샷에 reserve 값이 남아 있어도 이제 표시하지 않는다) */}
 
-            <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-md bg-[#edf0f3]">
-              <span
-                className="block rounded-sm bg-cobalt transition-[width] duration-700"
-                style={{ width: `${ratio(budgetAl.breakdown.flight_krw, barDenom)}%` }}
+<div className="flex h-4 items-center gap-0.5 rounded-md">
+              <BarSegment
+                label="항공"
+                amount={formatWon(budgetAl.breakdown.flight_krw)}
+                percent={ratio(budgetAl.breakdown.flight_krw, barDenom)}
+                color="bg-cobalt"
               />
-              <span
-                className="block rounded-sm bg-teal transition-[width] duration-700"
-                style={{ width: `${ratio(budgetAl.breakdown.hotel_krw, barDenom)}%` }}
+              <BarSegment
+                label="숙소"
+                amount={formatWon(budgetAl.breakdown.hotel_krw)}
+                percent={ratio(budgetAl.breakdown.hotel_krw, barDenom)}
+                color="bg-teal"
               />
-              <span
-                className="block rounded-sm bg-amber transition-[width] duration-700"
-                style={{ width: `${ratio(budgetAl.breakdown.activity_krw, barDenom)}%` }}
+              <BarSegment
+                label="일정"
+                amount={formatWon(budgetAl.breakdown.activity_krw)}
+                percent={ratio(budgetAl.breakdown.activity_krw, barDenom)}
+                color="bg-amber"
               />
               {budgetAl.status === "fit" && remaining > 0 && (
-                <span
-                  className="block rounded-sm bg-[#d7dce1] transition-[width] duration-700"
-                  style={{ width: `${ratio(remaining, barDenom)}%` }}
+                <BarSegment
+                  label="남음"
+                  amount={formatWon(remaining)}
+                  percent={ratio(remaining, barDenom)}
+                  color="bg-[#d7dce1]"
                 />
               )}
             </div>
@@ -600,29 +595,6 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
 
               )}
             </div>
-
-            {narrativeByDay.has(day.day_number) && (
-              <div className="mb-3.5">
-                <button
-                  onClick={() => toggleDay(day.day_number)}
-                  className="flex w-full items-center gap-1.5 rounded-lg border border-line-soft bg-[#fcfdfd] px-3 py-2 text-left text-[12.5px] font-semibold text-ink-2 transition-colors hover:border-ink-3"
-                >
-                  <span
-                    className={`inline-block text-[10px] text-ink-3 transition-transform ${
-                      openDays.has(day.day_number) ? "rotate-90" : ""
-                    }`}
-                  >
-                    ▶
-                  </span>
-                  일정 설명 {openDays.has(day.day_number) ? "접기" : "펼쳐보기"}
-                </button>
-                {openDays.has(day.day_number) && (
-                  <div className="mt-2 whitespace-pre-line rounded-lg bg-[#fcfdfd] px-3.5 py-3 text-[13px] leading-relaxed text-ink-2">
-                    {renderBoldText(narrativeByDay.get(day.day_number)!)}
-                  </div>
-                )}
-              </div>
-            )}
 
             <div className="relative pl-[34px]">
               {/* 세로선 */}
