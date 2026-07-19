@@ -13,6 +13,8 @@ interface Props {
   /** 슬롯이 다 차면 예시 문장을 감춘다 */
   hideExamples: boolean;
   onSend: (text: string) => void;
+  /** "계획 다시 짜기" — 계획이 그려진 뒤에만 부모가 넘겨준다 (없으면 버튼 미표시) */
+  onRestart?: () => void;
 }
 
 export default function ChatPanel({
@@ -20,6 +22,7 @@ export default function ChatPanel({
   isTyping,
   hideExamples,
   onSend,
+  onRestart,
 }: Props) {
   const [value, setValue] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
@@ -53,6 +56,14 @@ export default function ChatPanel({
           계획 만들기{" "}
           <span className="font-medium text-ink-3">· 문장으로 적어주세요</span>
         </p>
+        {onRestart && (
+          <button
+            onClick={onRestart}
+            className="whitespace-nowrap rounded-lg bg-ink px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-[#2a3138]"
+          >
+            계획 다시 짜기
+          </button>
+        )}
       </div>
 
       {/* 대화 */}

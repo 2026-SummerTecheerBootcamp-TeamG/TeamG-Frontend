@@ -23,7 +23,8 @@ export function loadGoogleMaps(): Promise<void> {
 
   loading = new Promise<void>((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&language=ko&region=KR`;
+    // libraries=places: 숙소 상세 모달이 사진/평점을 가져올 때 사용 (Places JS)
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&language=ko&region=KR&libraries=places`;
     script.async = true;
     script.onload = () => resolve();
     script.onerror = () => {
