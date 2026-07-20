@@ -30,7 +30,8 @@ export default function TripDetail({ planId, onBack }: Props) {
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-3">
+      {/* 목록 버튼은 오른쪽 끝 — 마이페이지 첫 화면의 "돌아가기"와 같은 자리 (피드백) */}
+      <div className="mb-4 flex items-center justify-end">
         <button
           onClick={onBack}
           className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-[13.5px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
