@@ -137,7 +137,8 @@ export default function PlanningRoom() {
   /** 계획 생성: 로그인 안 했으면 로그인 화면으로 보낸다 */
   const handleSend = (text: string) => {
     if (!isLoggedIn) {
-      navigate("/login", { state: { from: "/" } });
+      // "/"는 이제 온보딩 — 로그인 후엔 하던 곳(플래닝 룸)으로 돌아와야 한다
+      navigate("/login", { state: { from: "/planningroom" } });
       return;
     }
     chat.send(text);
@@ -146,7 +147,7 @@ export default function PlanningRoom() {
   /** 확정: 로그인 안 했으면 로그인 화면으로 보낸다 */
   const handleConfirm = async () => {
     if (!isLoggedIn) {
-      navigate("/login", { state: { from: "/" } });
+      navigate("/login", { state: { from: "/planningroom" } });
       return;
     }
     if (!plan) return;
