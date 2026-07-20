@@ -36,9 +36,9 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-white/85 backdrop-blur-md backdrop-saturate-150">
       <nav className="mx-auto flex h-16 max-w-[1240px] items-center justify-between px-5 md:px-7">
-        {/* 로고 클릭 = 온보딩(서비스 소개)으로 — "이 서비스가 뭐지?"로 돌아가는 문 (피드백) */}
+        {/* 로고 클릭 = 로그인 전: 온보딩(서비스 소개), 로그인 후: 플래닝룸 (버그 수정 — 로그인 상태에서도 항상 "/"로 가서 온보딩으로 튕기던 문제) */}
         <Link
-          to="/"
+          to={isLoggedIn ? "/planningroom" : "/"}
           className="flex items-center gap-2.5 text-[19px] font-bold tracking-[-0.03em]"
         >
           <Mark />
