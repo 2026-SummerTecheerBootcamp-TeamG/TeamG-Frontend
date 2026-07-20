@@ -13,6 +13,20 @@ import type {
 export const listTrips = () =>
   api.get<{ trips: TripSummary[] }>("/trips/").then((res) => res.data.trips);
 
+/** POST /api/v1/trips/plans/{plan_id}/select - 후보 목록에서 항공/숙소 직접 선택(교체).
+    재검색 없이 저장 후보로 재배분만 하므로 동기 응답 — 새 버전 plan_id를 돌려준다 */
+export const selectPlanCandidate = (
+  planId: number,
+  kind: "flight" | "hotel",
+  index: number,
+) =>
+  api
+    .post<{ new_plan_id: number; summary: string }>(
+      `/trips/plans/${planId}/select`,
+      { kind, index },
+    )
+    .then((res) => res.data);
+
 /** PATCH /api/v1/trips/{request_id}/title - 계획 이름 수정 (빈 문자열 = 이름 제거) */
 export const updateTripTitle = (requestId: number, title: string) =>
   api

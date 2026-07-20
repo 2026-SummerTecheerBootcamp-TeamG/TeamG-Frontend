@@ -198,6 +198,33 @@ export interface PlanPayment {
   approved_at: string;
 }
 
+/** 검색 당시 항공 후보 (비교·재선택 UI용, 가격은 검색 시점 기준) */
+export interface FlightCandidate {
+  index: number;
+  airline: string;
+  price_krw: number;
+  utility: number | null;
+  utility_reasons: string[] | null;
+  departure_time: string | null;
+  arrival_time: string | null;
+  duration_min: number | null;
+  stops: number | null;
+  /** 현재 이 플랜이 선택 중인 후보인지 ("현재 선택" 배지) */
+  selected: boolean;
+}
+
+/** 검색 당시 숙소 후보 */
+export interface HotelCandidate {
+  index: number;
+  name: string;
+  price_krw: number;
+  utility: number | null;
+  utility_reasons: string[] | null;
+  stars: number | null;
+  address: string | null;
+  selected: boolean;
+}
+
 export interface PlanDetail {
   plan_id: number;
   request_id: number;
@@ -217,6 +244,8 @@ export interface PlanDetail {
   /** 저장 스냅샷으로 재구성한 대화 이력 (마이페이지에서 다시 열 때 챗 복원용) */
   conversation?: { role: "user" | "bot"; text: string }[];
   bookings: PlanBooking[];
+  /** 검색 당시 후보 목록 — 비교·재선택 UI 재료 (구버전 플랜은 빈 배열일 수 있음) */
+  candidates?: { flights: FlightCandidate[]; hotels: HotelCandidate[] };
   created_at: string;
 }
 
