@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import FeatureSection from "./components/FeatureSection";
+import Reveal from "./components/Reveal";
 import { onboardingStorage } from "@/lib/onboarding";
 import bg from "@/assets/img/background.jpg";
 
@@ -12,7 +13,9 @@ const PLAN_PARTS = [
   { icon: "🧭", label: "동선", dot: "bg-violet" },
 ];
 
-const SLOT_CHIPS = ["8/10 – 8/13", "2인", "도쿄"];
+// step 01 예시의 파싱 칩 — 위 채팅 예시 문장과 반드시 1:1로 맞아야 한다
+// (예전엔 문장에 없는 "2인"이 칩에 있어 "멋대로 추가한" 것처럼 보였음 — 피드백)
+const SLOT_CHIPS = ["8/10 – 8/13", "도쿄", "2인", "100만원"];
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -49,9 +52,10 @@ export default function Onboarding() {
             </p>
 
             <div className="mt-16 flex items-center gap-3">
+              {/* hover: 색 + 살짝 커짐 (피드백) — transition-all로 둘 다 부드럽게 */}
               <button
                 onClick={finish}
-                className="flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-cobalt px-7 py-4 text-[15.5px] font-bold text-white transition-colors hover:bg-[#1c36c4]"
+                className="flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-cobalt px-7 py-4 text-[15.5px] font-bold text-white transition-all duration-200 hover:scale-[1.04] hover:bg-[#1c36c4]"
               >
                 <span>채팅하러 가기</span>
                 <ArrowRight size={17} strokeWidth={2.5} aria-hidden />
@@ -98,7 +102,10 @@ export default function Onboarding() {
 
       {/* 3단계 — 섹션별로 큰 헤드라인 + 좌우 교차 배치 (토스 기능 소개 섹션 스타일) */}
       <section className="bg-white">
+        {/* 각 단계는 스크롤로 들어올 때 아래→위로 떠오르며 등장 (Reveal, 피드백).
+            맨 아래 파란 CTA 영역은 연출 제외 — 피드백 명세 */}
         <div className="mx-auto flex max-w-[1240px] flex-col gap-28 px-5 pb-20 pt-16 md:gap-36 md:px-7 md:pb-28 md:pt-24">
+          <Reveal>
           <FeatureSection
             step="01"
             tone="cobalt"
@@ -108,7 +115,7 @@ export default function Onboarding() {
           >
             <div className="flex flex-col gap-2">
               <div className="max-w-[90%] self-end whitespace-pre-wrap break-keep rounded-2xl rounded-br-[5px] bg-ink px-3 py-2 text-[12.5px] text-white">
-                8월 10일에 3박 4일, 도쿄 여행 가고 싶어
+                8월 10일에 3박 4일, 도쿄 2명이서 100만원으로 여행 가고 싶어
               </div>
               <div className="flex w-fit gap-1 self-start rounded-2xl rounded-bl-[5px] bg-[#eef1f4] px-3 py-2.5">
                 {[0, 1, 2].map((i) => (
@@ -131,7 +138,9 @@ export default function Onboarding() {
               </div>
             </div>
           </FeatureSection>
+          </Reveal>
 
+          <Reveal>
           <FeatureSection
             step="02"
             tone="violet"
@@ -168,7 +177,9 @@ export default function Onboarding() {
               </div>
             </div>
           </FeatureSection>
+          </Reveal>
 
+          <Reveal>
           <FeatureSection
             step="03"
             tone="stamp"
@@ -185,6 +196,7 @@ export default function Onboarding() {
               </p>
             </div>
           </FeatureSection>
+          </Reveal>
         </div>
       </section>
 
@@ -194,16 +206,19 @@ export default function Onboarding() {
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-[length:22px_22px] opacity-[0.12]"
         />
-        <div className="relative mx-auto flex max-w-[1240px] flex-col items-center px-5 py-24 text-center text-white md:px-7 md:py-28">
+        {/* 세로 여백 2배(py-24→48) — 텍스트는 그대로 수직·수평 중앙 (피드백) */}
+        <div className="relative mx-auto flex max-w-[1240px] flex-col items-center justify-center px-5 py-48 text-center text-white md:px-7 md:py-56">
           <h2 className="text-[clamp(26px,4vw,42px)] font-extrabold leading-[1.25] tracking-[-0.035em]">
             이제 직접 계획을 세워볼까요?
           </h2>
           <p className="mt-3 text-[16px] text-white/80">
             지금 시작하면 몇 분 안에 첫 여행 계획이 완성돼요.
           </p>
+          {/* hover: 흰 배경 → 파란 배경 + 흰 글자 반전, 살짝 커짐.
+              duration-300: 기본(150ms)보다 여유 있게 — 반전이 부드럽게 보이도록 (피드백) */}
           <button
             onClick={finish}
-            className="mt-8 rounded-full bg-white px-9 py-4 text-[16px] font-bold text-cobalt transition-transform hover:scale-[1.03]"
+            className="mt-8 rounded-full bg-white px-9 py-4 text-[16px] font-bold text-cobalt transition-all duration-300 hover:scale-[1.03] hover:bg-cobalt hover:text-white hover:ring-2 hover:ring-white/80"
           >
             여행 계획 시작하기 →
           </button>
