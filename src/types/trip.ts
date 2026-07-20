@@ -224,6 +224,8 @@ export interface PlanDetail {
 
 export interface TripSummary {
   request_id: number;
+  /** 사용자가 붙인 계획 이름 — 빈 문자열이면 목적지를 이름으로 표시 */
+  title: string;
   departure: string;
   destinations: string[];
   start_date: string;
