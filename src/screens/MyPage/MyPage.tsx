@@ -31,7 +31,7 @@ export default function MyPage() {
     // 거기서 대화로 이어서 수정할 수 있다 (PlanningRoom이 ?plan=을 읽어 불러옴)
     const trip = trips?.find((t) => t.plan_id === id);
     if (trip?.status === "draft") {
-      navigate(`/?plan=${id}`);
+      navigate(`/planningroom?plan=${id}`);
       return;
     }
     setSearchParams({ plan: String(id) });
