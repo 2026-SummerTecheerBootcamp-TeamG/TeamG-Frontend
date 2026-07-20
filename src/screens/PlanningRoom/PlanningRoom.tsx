@@ -168,6 +168,8 @@ export default function PlanningRoom() {
             onSend={handleSend}
             // 초기 화면에서는 다시 짤 것이 없으므로 버튼 숨김
             onRestart={status !== "idle" ? handleRestart : undefined}
+            // 생성 중(building)·수정 중(editing)에는 버튼을 잠가 실행 중 초기화를 예방
+            restartDisabled={status === "building" || editing}
             busyEditing={editing}
           />
 

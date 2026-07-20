@@ -25,7 +25,7 @@ interface Props {
  * 움직임을 만든다. 목표가 멈춰 있는 동안에도 97%까지 아주 천천히 전진.
  * 값은 절대 뒤로 가지 않는다 (왔다갔다 방지).
  */
-function useSmoothProgress(target: number) {
+export function useSmoothProgress(target: number) {
   const [value, setValue] = useState(0);
   const raf = useRef(0);
   const state = useRef({ value: 0, target: 0, last: 0 });
