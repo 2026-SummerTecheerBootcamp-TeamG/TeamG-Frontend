@@ -29,7 +29,8 @@ export default function FeatureSection({
   tone: Tone;
   icon: string;
   title: string;
-  desc: string;
+  /** ReactNode: 문장 사이 <br/> 줄바꿈을 넣을 수 있게 (문자열도 그대로 허용) */
+  desc: ReactNode;
   reverse?: boolean;
   children?: ReactNode;
 }) {

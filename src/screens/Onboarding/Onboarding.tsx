@@ -54,10 +54,11 @@ export default function Onboarding() {
               <br />
               여행은 당신에게
             </h1>
+            {/* 문장 단위 줄바꿈 — JSX에서는 \n이 아니라 <br />로 (\n은 글자 그대로 보임) */}
             <p className="mt-9 max-w-[440px] text-[16px] leading-relaxed text-ink-2">
               날짜와 인원만 말해주세요.
-              숙소·일정·동선까지 AI가 한 번에
-              정리해드립니다.
+              <br />
+              숙소·일정·동선까지 AI가 한 번에 정리해드립니다.
             </p>
 
             <div className="mt-16 flex items-center gap-3">
@@ -120,7 +121,13 @@ export default function Onboarding() {
             tone="cobalt"
             icon="💬"
             title="채팅으로 요청하세요"
-            desc="가고 싶은 날짜, 인원, 예산, 취향을 자유롭게 말해주세요. 정해진 양식은 없습니다."
+            desc={
+              <>
+                가고 싶은 날짜, 인원, 예산, 취향을 자유롭게 말해주세요.
+                <br />
+                정해진 양식은 없습니다.
+              </>
+            }
           >
             <div className="flex flex-col gap-2">
               <div className="max-w-[90%] self-end whitespace-pre-wrap break-keep rounded-2xl rounded-br-[5px] bg-ink px-3 py-2 text-[12.5px] text-white">
@@ -194,7 +201,13 @@ export default function Onboarding() {
             tone="stamp"
             icon="✅"
             title="마음에 들면 확정"
-            desc="자유롭게 수정하다가 마음에 들면 확정하세요. 마이페이지에서 언제든 다시 볼 수 있어요."
+            desc={
+              <>
+                자유롭게 수정하다가 마음에 들면 확정하세요.
+                <br />
+                마이페이지에서 언제든 다시 볼 수 있어요.
+              </>
+            }
           >
             <div className="flex flex-col items-center gap-3 py-2">
               <span className="flex h-16 w-16 rotate-[-8deg] items-center justify-center rounded-full border-[3px] border-dashed border-stamp text-[12px] font-extrabold tracking-[0.08em] text-stamp">
