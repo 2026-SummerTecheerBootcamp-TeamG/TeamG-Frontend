@@ -202,6 +202,9 @@ export interface PlanDetail {
   plan_id: number;
   request_id: number;
   status: "processing" | "draft" | "confirmed";
+  /** 여행 시작/종료일 — days 배열은 귀국일이 빠져 있어 길이로 기간을 셀 수 없다 (Bug#96) */
+  start_date: string;
+  end_date: string;
   allocation: Allocation | null;
   narrative: string | null;
   flight: PlanFlight | null;

@@ -5,7 +5,7 @@ import { getApiErrorMessage } from "@/lib/api";
 import { fieldsToChips, summarizeFields } from "../lib/parseRequest";
 
 const GREETING =
-  "가는 날짜, 인원, 목적지, 예산을 한 문장으로 적어주세요.\n예: “후쿠오카, 9/12~9/14, 2명, 100만원”";
+  "가는 날짜, 인원, 목적지, 예산을 적어주세요.\n예: “후쿠오카, 9/12~9/14, 2명, 100만원”";
 
 interface Options {
   /** 슬롯이 다 찼을 때 (계획 생성) - 확정된 parse_id와 필드를 넘긴다 */

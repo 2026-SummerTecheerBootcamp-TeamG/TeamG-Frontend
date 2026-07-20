@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import PlanDetailModal from "./PlanDetailModal";
 import RouteMap from "./RouteMap";
 import type { ParsedFields, PlanDetail, PlanStatus } from "@/types/trip";
 import { preparePayment } from "@/api/payments";
 import { getApiErrorMessage } from "@/lib/api";
 import { loadTossPayments } from "@/lib/tossPayments";
-import { formatWon } from "../lib/parseRequest";
+import { formatWon, getNightsFromDates } from "../lib/parseRequest";
 
 interface Props {
   plan: PlanDetail;
@@ -40,38 +42,38 @@ const formatDuration = (min: number) => {
   return h > 0 ? `${h}시간${m > 0 ? ` ${m}분` : ""}` : `${m}분`;
 };
 
-/** narrative(마크다운)를 "## Day N" 헤더 기준으로 잘라 DAY별 설명 텍스트만 뽑아낸다 */
-function splitNarrativeByDay(narrative: string): Map<number, string> {
-  const result = new Map<number, string>();
-  const headerRe = /##\s*Day\s*(\d+)[^\n]*\n/g;
-  const matches = [...narrative.matchAll(headerRe)];
+/** 예산 바의 한 구간 — hover 시 살짝 부풀고, 항목·금액·비율 툴팁을 띄운다 */
+function BarSegment({
+  label,
+  amount,
+  percent,
+  color,
+}: {
+  label: string;
+  amount: string;
+  percent: number;
+  color: string;
+}) {
+  return (
+    <span
+      className="group relative flex cursor-default items-center"
+      style={{ width: `${percent}%` }}
+    >
+      {/* 색 막대 — hover 시 두께가 커지며 살짝 떠오른다 */}
+      <span
+        className={`block h-2.5 w-full rounded-sm transition-all duration-200 group-hover:h-4 group-hover:shadow-[0_2px_8px_-2px_rgba(15,20,24,.35)] ${color}`}
+      />
 
-  matches.forEach((m, idx) => {
-    const dayNumber = Number(m[1]);
-    const start = m.index! + m[0].length;
-    const end = idx + 1 < matches.length ? matches[idx + 1].index! : narrative.length;
-    const text = narrative.slice(start, end).replace(/^-+\s*$/gm, "").trim();
-    if (text) result.set(dayNumber, text);
-  });
-
-  return result;
-}
-
-/** "**text**" 마크다운 굵게 표시만 최소 처리해서 렌더링한다 (마크다운 라이브러리 없이) */
-function renderBoldText(text: string) {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((chunk, i) =>
-    chunk.startsWith("**") && chunk.endsWith("**") ? (
-      <strong key={i} className="font-semibold text-ink">
-        {chunk.slice(2, -2)}
-      </strong>
-    ) : (
-      chunk
-    ),
+      {/* 툴팁 */}
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2.5 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[11.5px] font-semibold text-white opacity-0 shadow-lg transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+        {label} {amount}원 · {percent}%
+        <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-4 border-t-4 border-x-transparent border-t-ink" />
+      </span>
+    </span>
   );
 }
-
 export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
-  const { allocation: al, flight, hotel, days, payment, bookings } = plan;
+  const { allocation: al, flight, hotel, days, payment, bookings, start_date, end_date } = plan;
   /** 항공 결제 완료 건 (숙소 결제 payment와 별도) */
   const flightPayment = plan.flight_payment ?? null;
   /** 재시도 이력까지 시간순으로 들어있으니 종류별 마지막(최근) 건 기준으로 표시
@@ -100,32 +102,19 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
     prevConfirmedRef.current = confirmed;
   }, [confirmed, readOnly]);
 
-  /** 예약·결제 패널에서 정보가 펼쳐진 항목 (항공/숙소 중 하나만, 다시 누르면 접힘) */
-  const [openInfo, setOpenInfo] = useState<"flight" | "hotel" | null>(null);
+  /** 상세 모달이 열려 있는 대상 — 지도/사진/정보를 서비스 안에서 직접 보여준다 */
+  const [detailTarget, setDetailTarget] = useState<"flight" | "hotel" | null>(null);
 
-  /** 모달의 "예약·결제하러 가기": 모달을 닫고 예약 패널 위치로 부드럽게 스크롤 */
-  const goToBookingPanel = () => {
+  /**
+   * 확정 모달의 "예약·결제하러 가기": 마이페이지의 계획 상세로 이동.
+   * 홈에서 그대로 진행하면 왼쪽 챗이 살아 있어 "아직 수정 중"처럼 보인다는
+   * 피드백 — 확정 후 예약·결제는 마이페이지가 제자리
+   */
+  const navigate = useNavigate();
+  const goToMyPageBooking = () => {
     setModalOpen(false);
-    // setState 반영 후 스크롤되도록 다음 프레임으로 미룸
-    requestAnimationFrame(() => {
-      document.getElementById("booking-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+    navigate(`/mypage?plan=${plan.plan_id}`);
   };
-  /** DAY별 설명 접기/펼치기 */
-  const narrativeByDay = useMemo(
-    () => (plan.narrative ? splitNarrativeByDay(plan.narrative) : new Map<number, string>()),
-    [plan.narrative],
-  );
-  const [openDays, setOpenDays] = useState<Set<number>>(new Set());
-  const toggleDay = (dayNumber: number) => {
-    setOpenDays((prev) => {
-      const next = new Set(prev);
-      if (next.has(dayNumber)) next.delete(dayNumber);
-      else next.add(dayNumber);
-      return next;
-    });
-  };
-
   /**
    * 확정된 플랜 결제: 서버가 금액을 정하고(prepare) 토스 결제창을 연다.
    * target=hotel  → 결제 승인 시 숙소 예약(LiteAPI 샌드박스) 자동 진행
@@ -165,7 +154,9 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
   const cities = days.length > 0
     ? Array.from(new Set(days.map((d) => d.city_name).filter(Boolean))).join(" · ")
     : request?.destinations.map((d) => d.city).join(" · ");
-  const nights = Math.max(0, days.length - 1);
+  /** days 배열은 귀국일이 빠진 "일정이 있는 날"만 담고 있어 길이로 박수를 셀 수 없다(Bug#96) —
+      plan의 실제 시작/종료일로 계산한다 */
+  const nights = getNightsFromDates(start_date, end_date) ?? Math.max(0, days.length - 1);
   const pax = request ? request.pax.adult + request.pax.child : null;
 
   const budgetAl = al && (al.status === "fit" || al.status === "insufficient") ? al : null;
@@ -291,23 +282,31 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
             {/* 예비비 개념 폐지 — 총예산 전액이 곧 사용 가능 예산.
                 (옛 계획 스냅샷에 reserve 값이 남아 있어도 이제 표시하지 않는다) */}
 
-            <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-md bg-[#edf0f3]">
-              <span
-                className="block rounded-sm bg-cobalt transition-[width] duration-700"
-                style={{ width: `${ratio(budgetAl.breakdown.flight_krw, barDenom)}%` }}
+<div className="flex h-4 items-center gap-0.5 rounded-md">
+              <BarSegment
+                label="항공"
+                amount={formatWon(budgetAl.breakdown.flight_krw)}
+                percent={ratio(budgetAl.breakdown.flight_krw, barDenom)}
+                color="bg-cobalt"
               />
-              <span
-                className="block rounded-sm bg-teal transition-[width] duration-700"
-                style={{ width: `${ratio(budgetAl.breakdown.hotel_krw, barDenom)}%` }}
+              <BarSegment
+                label="숙소"
+                amount={formatWon(budgetAl.breakdown.hotel_krw)}
+                percent={ratio(budgetAl.breakdown.hotel_krw, barDenom)}
+                color="bg-teal"
               />
-              <span
-                className="block rounded-sm bg-amber transition-[width] duration-700"
-                style={{ width: `${ratio(budgetAl.breakdown.activity_krw, barDenom)}%` }}
+              <BarSegment
+                label="일정"
+                amount={formatWon(budgetAl.breakdown.activity_krw)}
+                percent={ratio(budgetAl.breakdown.activity_krw, barDenom)}
+                color="bg-amber"
               />
               {budgetAl.status === "fit" && remaining > 0 && (
-                <span
-                  className="block rounded-sm bg-[#d7dce1] transition-[width] duration-700"
-                  style={{ width: `${ratio(remaining, barDenom)}%` }}
+                <BarSegment
+                  label="남음"
+                  amount={formatWon(remaining)}
+                  percent={ratio(remaining, barDenom)}
+                  color="bg-[#d7dce1]"
                 />
               )}
             </div>
@@ -362,15 +361,14 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                     🏨
                   </span>
                   <button
-                    onClick={() => setOpenInfo(openInfo === "hotel" ? null : "hotel")}
+                    onClick={() => setDetailTarget("hotel")}
                     className="min-w-0 flex-1 text-left"
                   >
                     <p className="truncate text-[14.5px] font-bold tracking-[-0.02em]">
                       {hotel.name}
                     </p>
                     <p className="mt-0.5 text-[11.5px] text-ink-3">
-                      숙소{nights > 0 && ` · ${nights}박`} · 정보 보기{" "}
-                      {openInfo === "hotel" ? "▲" : "▼"}
+                      숙소{nights > 0 && ` · ${nights}박`} · <span className="text-cobalt">상세 보기</span>
                     </p>
                   </button>
                   <span className="whitespace-nowrap text-[17px] font-extrabold tracking-[-0.02em]">
@@ -381,51 +379,15 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                       ✓ 결제 완료
                     </span>
                   ) : (
+                    // 정보 확인 → 결제 한 흐름: 결제도 상세 모달을 거친다 (모달 하단에 결제 버튼)
                     <button
-                      onClick={() => handlePay("hotel")}
-                      disabled={payingTarget !== null}
-                      className="whitespace-nowrap rounded-field bg-cobalt px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)] transition-all hover:-translate-y-px hover:bg-[#1c36c4] disabled:opacity-60"
+                      onClick={() => setDetailTarget("hotel")}
+                      className="whitespace-nowrap rounded-field bg-cobalt px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)] transition-all hover:-translate-y-px hover:bg-[#1c36c4]"
                     >
-                      {payingTarget === "hotel" ? "결제창 여는 중..." : "결제하기"}
+                      상세·결제
                     </button>
                   )}
                 </div>
-
-                {openInfo === "hotel" && (
-                  <div className="mt-3 rounded-lg bg-[#f4f6f8] px-3.5 py-3 text-[12.5px] leading-relaxed text-ink-2">
-                    {hotel.stars !== null && (
-                      <p>
-                        등급:{" "}
-                        <span className="text-amber">
-                          {"★".repeat(hotel.stars)}
-                          {"☆".repeat(Math.max(0, 5 - hotel.stars))}
-                        </span>
-                      </p>
-                    )}
-                    {hotel.address && <p>주소: {hotel.address}</p>}
-                    {pax !== null && <p>객실: 트윈 {Math.ceil(pax / 2)}실{nights > 0 && ` · ${nights}박`}</p>}
-                    {nights > 0 && <p>1박 요금: {formatWon(Math.round(hotel.price_krw / nights))}원</p>}
-                    {hotel.utility !== null && <p>만족도 점수: {hotel.utility}</p>}
-                    {(hotel.utility_reasons?.length ?? 0) > 0 && (
-                      <p className="text-ink-3">
-                        점수 근거: {hotel.utility_reasons!.join(" · ")}
-                      </p>
-                    )}
-                    {hotel.booking_url && (
-                      <a
-                        href={hotel.booking_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 inline-flex text-[12px] font-semibold text-cobalt hover:underline"
-                      >
-                        구글에서 이 숙소 더 알아보기 →
-                      </a>
-                    )}
-                    <p className="mt-1 text-ink-3">
-                      결제는 토스페이먼츠로 진행되고, 승인되면 예약까지 자동으로 이어집니다.
-                    </p>
-                  </div>
-                )}
 
                 {(payment || lastBooking) && (
                   <div className="mt-3 rounded-lg bg-teal/5 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-ink-2">
@@ -455,14 +417,14 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                     ✈️
                   </span>
                   <button
-                    onClick={() => setOpenInfo(openInfo === "flight" ? null : "flight")}
+                    onClick={() => setDetailTarget("flight")}
                     className="min-w-0 flex-1 text-left"
                   >
                     <p className="truncate text-[14.5px] font-bold tracking-[-0.02em]">
                       {flight.airline}
                     </p>
                     <p className="mt-0.5 text-[11.5px] text-ink-3">
-                      항공 · 정보 보기 {openInfo === "flight" ? "▲" : "▼"}
+                      항공 · <span className="text-cobalt">상세 보기</span>
                     </p>
                   </button>
                   <span className="whitespace-nowrap text-[17px] font-extrabold tracking-[-0.02em]">
@@ -474,45 +436,13 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                     </span>
                   ) : (
                     <button
-                      onClick={() => handlePay("flight")}
-                      disabled={payingTarget !== null}
-                      className="whitespace-nowrap rounded-field bg-cobalt px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)] transition-all hover:-translate-y-px hover:bg-[#1c36c4] disabled:opacity-60"
+                      onClick={() => setDetailTarget("flight")}
+                      className="whitespace-nowrap rounded-field bg-cobalt px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)] transition-all hover:-translate-y-px hover:bg-[#1c36c4]"
                     >
-                      {payingTarget === "flight" ? "결제창 여는 중..." : "결제하기"}
+                      상세·결제
                     </button>
                   )}
                 </div>
-
-                {openInfo === "flight" && (
-                  <div className="mt-3 rounded-lg bg-[#f4f6f8] px-3.5 py-3 text-[12.5px] leading-relaxed text-ink-2">
-                    {flight.route && <p>노선: {flight.route} (왕복)</p>}
-                    {(flight.departure_time || flight.arrival_time) && (
-                      <p>
-                        가는 편: {flight.departure_time && formatClock(flight.departure_time)}
-                        {flight.arrival_time && ` → ${formatClock(flight.arrival_time)}`} 도착
-                      </p>
-                    )}
-                    {flight.duration_min != null && <p>비행 시간: {formatDuration(flight.duration_min)}</p>}
-                    {flight.stops != null && (
-                      <p>경유: {flight.stops === 0 ? "직항" : `${flight.stops}회`}</p>
-                    )}
-                    {flight.utility !== null && <p>만족도 점수: {flight.utility}</p>}
-                    {flight.booking_url && (
-                      <a
-                        href={flight.booking_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 inline-flex text-[12px] font-semibold text-cobalt hover:underline"
-                      >
-                        구글 항공편에서 이 노선 더 알아보기 →
-                      </a>
-                    )}
-                    <p className="mt-1 text-ink-3">
-                      결제는 토스페이먼츠로 진행되고, 승인되면 자체 공급자가 발권을
-                      완료해 PNR(예약번호)을 발급합니다 (샌드박스 — 실제 청구 없음).
-                    </p>
-                  </div>
-                )}
 
                 {(issuedPnr || flightPayment) && (
                   <div className="mt-3 rounded-lg bg-teal/5 px-3.5 py-2.5 text-[12.5px] leading-relaxed">
@@ -572,25 +502,19 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                   )}
                 </div>
               )}
-              {flight.utility !== null && (
-                <p className="mt-1 text-[12.5px] text-ink-3">만족도 점수 {flight.utility}</p>
-              )}
             </div>
             <div className="min-w-[92px] whitespace-nowrap text-right text-sm font-bold">
               {formatWon(budgetAl ? budgetAl.breakdown.flight_krw : flight.price_krw)}원
 
             </div>
           </div>
-          {flight.booking_url && (
-            <a
-              href={flight.booking_url}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-flex text-[12.5px] font-semibold text-cobalt hover:underline"
-            >
-              항공권 확인하러 가기 →
-            </a>
-          )}
+          {/* 외부 링크 대신 서비스 안 상세 모달로 (노선/시간/결제까지 한 화면) */}
+          <button
+            onClick={() => setDetailTarget("flight")}
+            className="mt-3.5 w-full rounded-field border-[1.5px] border-cobalt py-2.5 text-[13.5px] font-bold text-cobalt transition-colors hover:bg-cobalt-soft"
+          >
+            항공편 상세 정보 보기
+          </button>
         </div>
       )}
 
@@ -619,9 +543,6 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                   트윈 {Math.ceil(pax / 2)}실{nights > 0 && ` · ${nights}박`}
                 </p>
               )}
-              {hotel.utility !== null && (
-                <p className="mt-1 text-[12.5px] text-ink-3">만족도 점수 {hotel.utility}</p>
-              )}
             </div>
             <div className="min-w-[92px] whitespace-nowrap text-right text-sm font-bold">
               {formatWon(budgetAl ? budgetAl.breakdown.hotel_krw : hotel.price_krw)}원
@@ -632,16 +553,13 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
               )}
             </div>
           </div>
-          {hotel.booking_url && (
-            <a
-              href={hotel.booking_url}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-flex text-[12.5px] font-semibold text-cobalt hover:underline"
-            >
-              숙소 확인하러 가기 →
-            </a>
-          )}
+          {/* 외부 링크 대신 서비스 안 상세 모달로 (지도/사진/평점/결제까지 한 화면) */}
+          <button
+            onClick={() => setDetailTarget("hotel")}
+            className="mt-3.5 w-full rounded-field border-[1.5px] border-cobalt py-2.5 text-[13.5px] font-bold text-cobalt transition-colors hover:bg-cobalt-soft"
+          >
+            숙소 상세 정보 · 사진 보기
+          </button>
 
         </div>
       )}
@@ -677,29 +595,6 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
 
               )}
             </div>
-
-            {narrativeByDay.has(day.day_number) && (
-              <div className="mb-3.5">
-                <button
-                  onClick={() => toggleDay(day.day_number)}
-                  className="flex w-full items-center gap-1.5 rounded-lg border border-line-soft bg-[#fcfdfd] px-3 py-2 text-left text-[12.5px] font-semibold text-ink-2 transition-colors hover:border-ink-3"
-                >
-                  <span
-                    className={`inline-block text-[10px] text-ink-3 transition-transform ${
-                      openDays.has(day.day_number) ? "rotate-90" : ""
-                    }`}
-                  >
-                    ▶
-                  </span>
-                  일정 설명 {openDays.has(day.day_number) ? "접기" : "펼쳐보기"}
-                </button>
-                {openDays.has(day.day_number) && (
-                  <div className="mt-2 whitespace-pre-line rounded-lg bg-[#fcfdfd] px-3.5 py-3 text-[13px] leading-relaxed text-ink-2">
-                    {renderBoldText(narrativeByDay.get(day.day_number)!)}
-                  </div>
-                )}
-              </div>
-            )}
 
             <div className="relative pl-[34px]">
               {/* 세로선 */}
@@ -808,10 +703,10 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                     {[flight && "✈️ 항공", hotel && "🏨 숙소"].filter(Boolean).join(" · ")}
                   </p>
                   <button
-                    onClick={goToBookingPanel}
+                    onClick={goToMyPageBooking}
                     className="w-full rounded-field bg-cobalt py-3 text-[14.5px] font-bold text-white transition-colors hover:bg-[#1c36c4]"
                   >
-                    예약·결제하러 가기
+                    마이페이지에서 예약·결제하기
                   </button>
                 </>
               ) : (
@@ -831,6 +726,28 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
             </div>
           </div>
         </div>
+      )}
+
+      {/* 항공/숙소 상세 모달 — 지도·사진·정보·결제를 서비스 안에서 */}
+      {detailTarget && (
+        <PlanDetailModal
+          target={detailTarget}
+          hotel={hotel}
+          flight={flight}
+          nights={nights}
+          pax={pax}
+          hotelPriceKrw={budgetAl ? budgetAl.breakdown.hotel_krw : hotel?.price_krw ?? 0}
+          flightPriceKrw={budgetAl ? budgetAl.breakdown.flight_krw : flight?.price_krw ?? 0}
+          payment={payment}
+          flightPayment={flightPayment}
+          issuedPnr={issuedPnr}
+          hotelConfirmation={lastBooking?.confirmation ?? null}
+          payingTarget={payingTarget}
+          payError={payError}
+          confirmed={confirmed}
+          onPay={handlePay}
+          onClose={() => setDetailTarget(null)}
+        />
       )}
     </div>
   );
