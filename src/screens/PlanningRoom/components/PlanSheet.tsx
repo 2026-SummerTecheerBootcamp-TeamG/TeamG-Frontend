@@ -807,6 +807,7 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
           kind={compareTarget}
           flights={flightCands}
           hotels={hotelCands}
+          route={flight?.route ?? null}
           canChange={!confirmed && !readOnly && !!onSelectCandidate}
           pickingIndex={pickingIndex}
           onPick={handlePickCandidate}

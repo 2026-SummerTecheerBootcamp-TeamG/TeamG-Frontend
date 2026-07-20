@@ -222,6 +222,9 @@ export interface HotelCandidate {
   utility_reasons: string[] | null;
   stars: number | null;
   address: string | null;
+  /** 상세 펼침의 미니 지도용 좌표 */
+  latitude: number | null;
+  longitude: number | null;
   selected: boolean;
 }
 

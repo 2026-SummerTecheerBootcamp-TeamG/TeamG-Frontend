@@ -19,13 +19,15 @@ export default function ProfileCard() {
     nickname: "", email: "", nationality: "", city: "", iata: "",
   });
 
-  /* ── 프로필 사진 변경 (피드백) ──────────────────────────────────────
-     업로드 버튼 → 파일 선택(이미지만) → 크롭 모달(정사각형 영역 선택)
-     → [변경] 시 서버 저장, [취소] 시 아무 변화 없음 */
+  /* ── 프로필 사진 변경 (피드백 2회 반영) ─────────────────────────────
+     "수정" 모드에서만 사진 변경 버튼이 보이고, 크롭까지 마쳐도 화면 미리보기만
+     바뀐다 — 실제 서버 반영은 프로필 [저장]을 눌렀을 때 (취소하면 그대로 버림).
+     흐름: 수정 → 사진 변경 → 파일 선택(이미지만) → 정사각형 크롭 → 미리보기 → 저장 */
   const fileInputRef = useRef<HTMLInputElement>(null);
   /** 크롭 모달에 띄울 원본 이미지 (null이면 모달 닫힘) */
   const [cropSrc, setCropSrc] = useState<string | null>(null);
-  const [photoSaving, setPhotoSaving] = useState(false);
+  /** 크롭을 마친 "저장 대기" 사진 — null이면 사진 변경 없음 */
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
   if (!user) return null;
@@ -46,19 +48,10 @@ export default function ProfileCard() {
     reader.readAsDataURL(file);
   };
 
-  /** 크롭 모달의 [변경] — 잘린 정사각형 이미지를 서버에 저장하고 화면에 반영 */
-  const applyCroppedPhoto = async (dataUrl: string) => {
+  /** 크롭 모달의 [변경] — 바로 저장하지 않고 미리보기로만 보관 (저장 버튼이 실제 반영) */
+  const holdCroppedPhoto = (dataUrl: string) => {
     setCropSrc(null);
-    setPhotoSaving(true);
-    setPhotoError(null);
-    try {
-      const updated = await updateProfileRequest({ profile_image: dataUrl });
-      updateProfile({ profileImage: updated.profile_image ?? dataUrl });
-    } catch (e) {
-      setPhotoError(getApiErrorMessage(e));
-    } finally {
-      setPhotoSaving(false);
-    }
+    setPendingPhoto(dataUrl);
   };
 
   /** 현재 국적의 공항 목록 (국적을 바꾸면 출발지 선택지도 바뀜 — 회원가입과 동일 규칙) */
@@ -66,7 +59,7 @@ export default function ProfileCard() {
     COUNTRIES.find((c) => c.code === form.nationality)?.airports ?? [];
 
   const startEdit = () => {
-    // 현재 프로필 값으로 폼을 채우고 편집 시작
+    // 현재 프로필 값으로 폼을 채우고 편집 시작 (사진 대기분·경고도 초기화)
     setForm({
       nickname: user.nickname,
       email: user.email,
@@ -74,6 +67,8 @@ export default function ProfileCard() {
       city: user.defaultDeparture.city,
       iata: user.defaultDeparture.iata,
     });
+    setPendingPhoto(null);
+    setPhotoError(null);
     setError(null);
     setEditing(true);
   };
@@ -101,6 +96,8 @@ export default function ProfileCard() {
           city: form.city.trim(),
           iata: form.iata.trim().toUpperCase(),
         },
+        // 크롭해 둔 사진이 있을 때만 함께 저장 (없으면 필드 자체를 안 보냄 = 기존 유지)
+        ...(pendingPhoto !== null ? { profile_image: pendingPhoto } : {}),
       });
       // 서버가 돌려준 최종값으로 전역 user 상태 갱신 (헤더/파서 프로필 채움에 즉시 반영)
       updateProfile({
@@ -111,7 +108,9 @@ export default function ProfileCard() {
           city: updated.default_departure.city,
           iata: updated.default_departure.iata ?? "",
         },
+        profileImage: updated.profile_image ?? user.profileImage,
       });
+      setPendingPhoto(null);
       setEditing(false);
     } catch (e) {
       setError(getApiErrorMessage(e));
@@ -138,11 +137,12 @@ export default function ProfileCard() {
       </div>
 
       <div className="px-[22px] pb-5 pt-2">
-        {/* 아바타 — 사진이 있으면 사진, 없으면 닉네임 첫 글자. 크기 확대 + 아래 사진 변경 (피드백) */}
+        {/* 아바타 — 사진이 있으면 사진, 없으면 닉네임 첫 글자.
+            편집 중이면 저장 대기 사진(pendingPhoto)을 미리보기로 우선 표시 */}
         <div className="my-4 flex flex-col items-start gap-2">
-          {user.profileImage ? (
+          {(editing && pendingPhoto) || user.profileImage ? (
             <img
-              src={user.profileImage}
+              src={(editing && pendingPhoto) || user.profileImage}
               alt="프로필 사진"
               className="h-[96px] w-[96px] rounded-[20px] object-cover"
             />
@@ -152,22 +152,32 @@ export default function ProfileCard() {
             </div>
           )}
 
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={photoSaving}
-            className="rounded-lg border border-line px-2.5 py-1 text-[12px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink disabled:opacity-60"
-          >
-            {photoSaving ? "저장 중..." : "사진 변경"}
-          </button>
-          {/* 숨겨진 파일 입력 — 버튼이 대신 클릭해 준다. accept로 이미지만 필터 */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFilePick}
-          />
-          {photoError && <p className="text-[12px] text-stamp">{photoError}</p>}
+          {/* 사진 변경은 "수정" 모드에서만 노출 — 저장을 눌러야 실제 반영 (피드백) */}
+          {editing && (
+            <>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={saving}
+                className="rounded-lg border border-line px-2.5 py-1 text-[12px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink disabled:opacity-60"
+              >
+                사진 변경
+              </button>
+              {/* 숨겨진 파일 입력 — 버튼이 대신 클릭해 준다. accept로 이미지만 필터 */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFilePick}
+              />
+              {pendingPhoto && (
+                <p className="text-[11.5px] text-ink-3">
+                  미리보기예요 — 아래 저장을 눌러야 적용됩니다.
+                </p>
+              )}
+              {photoError && <p className="text-[12px] text-stamp">{photoError}</p>}
+            </>
+          )}
         </div>
 
         {editing ? (
@@ -241,7 +251,12 @@ export default function ProfileCard() {
                 {saving ? "저장 중..." : "저장"}
               </button>
               <button
-                onClick={() => setEditing(false)}
+                onClick={() => {
+                  // 취소 = 사진 대기분 포함 전부 폐기 (서버에 아무것도 안 감)
+                  setPendingPhoto(null);
+                  setPhotoError(null);
+                  setEditing(false);
+                }}
                 disabled={saving}
                 className="rounded-field border border-line px-4 py-2 text-[13px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
               >
@@ -261,12 +276,12 @@ export default function ProfileCard() {
         )}
       </div>
 
-      {/* 사진 크롭 모달 — 취소하면 아무것도 바뀌지 않는다 */}
+      {/* 사진 크롭 모달 — [변경]은 미리보기 보관까지만, 실제 반영은 프로필 [저장] */}
       {cropSrc && (
         <AvatarCropModal
           src={cropSrc}
           onCancel={() => setCropSrc(null)}
-          onApply={applyCroppedPhoto}
+          onApply={holdCroppedPhoto}
         />
       )}
     </div>
