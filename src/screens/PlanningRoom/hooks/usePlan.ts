@@ -47,6 +47,8 @@ export function usePlan() {
   const [progress, setProgress] = useState(0);
   const [version, setVersion] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  /** 대화형 수정이 진행 중인지 — 챗 하단 미니 진행 바 표시용 */
+  const [editing, setEditing] = useState(false);
 
   /** 진행 중인 작업이 취소됐는지 (언마운트/새 요청 시작) 확인하는 플래그 */
   const cancelledRef = useRef(false);
@@ -126,6 +128,21 @@ export function usePlan() {
   const editWithMessage = useCallback(
     async (text: string): Promise<{ note: string }> => {
       if (!plan) return { note: "계획이 아직 없습니다." };
+      setEditing(true);
+      try {
+        return await runEdit(text);
+      } finally {
+        setEditing(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [plan],
+  );
+
+  /** editWithMessage의 본체 — editing 플래그 관리와 분리해 가독성 유지 */
+  const runEdit = useCallback(
+    async (text: string): Promise<{ note: string }> => {
+      if (!plan) return { note: "계획이 아직 없습니다." };
 
       const response = await editPlan(plan.plan_id, text);
 
@@ -136,6 +153,12 @@ export function usePlan() {
 
       const token = { cancelled: false };
       const result = await pollRun(response.run_id, token);
+
+      // 수정 태스크가 실패를 error 필드로 알린 경우 — 빈 placeholder 플랜을
+      // 로드하면 화면에서 계획이 증발하므로(실사고) 오류 안내만 하고 유지
+      if (result && typeof result === "object" && "error" in result) {
+        return { note: String((result as { error: unknown }).error) };
+      }
 
       // 재계획: 접수 응답에 plan_id가 바로 옴 / 국소수정: 폴링 결과의 new_plan_id
       const newPlanId =
@@ -189,7 +212,7 @@ export function usePlan() {
   }, [plan]);
 
   // 병합: 팀원의 progress(진행률 %) + 우리의 resetPlan(계획 다시 짜기) 모두 노출
-  return { plan, request, status, step, progress, version, error, start, loadExisting, editWithMessage, confirm, resetPlan };
+  return { plan, request, status, step, progress, version, error, editing, start, loadExisting, editWithMessage, confirm, resetPlan };
 }
 
 /**
@@ -197,7 +220,8 @@ export function usePlan() {
  * 단계 안에서도 이벤트가 쌓일수록 조금씩 올라가 막대가 멈춰 보이지 않게 한다.
  * 타이머 연출이 아니라 전부 실제 이벤트 기반.
  */
-const STEP_RANGE = [
+// PlanProgress가 단계별 바를 그릴 때도 쓰므로 export
+export const STEP_RANGE = [
   { base: 0, cap: 12 },
   { base: 12, cap: 55 },
   { base: 55, cap: 65 },

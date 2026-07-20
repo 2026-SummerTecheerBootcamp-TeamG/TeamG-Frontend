@@ -14,7 +14,7 @@ export default function PlanningRoom() {
   const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
 
-  const { plan, request, status, step, progress, version, error, start, loadExisting, editWithMessage, confirm, resetPlan } =
+  const { plan, request, status, step, progress, version, error, editing, start, loadExisting, editWithMessage, confirm, resetPlan } =
     usePlan();
 
   const chat = useChat({
@@ -168,6 +168,7 @@ export default function PlanningRoom() {
             onSend={handleSend}
             // 초기 화면에서는 다시 짤 것이 없으므로 버튼 숨김
             onRestart={status !== "idle" ? handleRestart : undefined}
+            busyEditing={editing}
           />
 
           <div
@@ -211,6 +212,7 @@ export default function PlanningRoom() {
                 version={version}
                 status={status}
                 onConfirm={handleConfirm}
+                onRestart={handleRestart}
               />
             )}
           </div>
