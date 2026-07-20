@@ -26,9 +26,9 @@
   --color-violet: #7a5af0; /* 동선 */
   --color-stamp: #d8402f; /* 확정 도장 / 경고 */
 
-  /* 폰트 */
-  --font-sans: "Pretendard", ui-sans-serif, system-ui, "Apple SD Gothic Neo",
-    sans-serif;
+  /* 폰트 — 웹폰트(index.html)로 로드되는 Pretendard Variable을 1순위로 */
+  --font-sans: "Pretendard Variable", "Pretendard", ui-sans-serif, system-ui,
+    "Apple SD Gothic Neo", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, "Roboto Mono", monospace;
 
   /* 라운드 */
@@ -61,6 +61,21 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+}
+
+/* 사진 캐러셀 전환 — 빠른 페이드 + 살짝 확대에서 안착 */
+@keyframes photo-in {
+  from {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.photo-swap {
+  animation: photo-in 0.18s ease;
 }
 
 /* 모션 최소화 설정 존중 */

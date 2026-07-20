@@ -14,6 +14,8 @@ interface Props {
   version: number;
   status: PlanStatus;
   onConfirm: () => void;
+  /** 확정 모달의 "나중에 할게요" — 홈 화면을 초기화 (계획은 마이페이지에 저장됨) */
+  onRestart?: () => void;
   /** 읽기 전용 (마이페이지 상세): 확정 버튼·도장을 숨긴다 */
   readOnly?: boolean;
 }
@@ -42,37 +44,47 @@ const formatDuration = (min: number) => {
   return h > 0 ? `${h}시간${m > 0 ? ` ${m}분` : ""}` : `${m}분`;
 };
 
-/** 예산 바의 한 구간 — hover 시 살짝 부풀고, 항목·금액·비율 툴팁을 띄운다 */
+/** hover 중인 예산 구간 정보 (바 위 고정 정보줄에 표시) */
+interface HoverSegInfo {
+  label: string;
+  amount: string;
+  percent: number;
+}
+
+/**
+ * 예산 바의 한 구간 — hover 시 살짝 부풀고, 정보는 바 위의 "고정 정보줄"에 표시.
+ * [병합 기록] 같은 잘림 문제를 두 구현이 각자 해결했다: develop의 포탈 툴팁 vs
+ * 이 브랜치의 고정 정보줄. 사용자 피드백("맨 위에 고정 표시")을 근거로
+ * 정보줄 방식을 채택하고 포탈 구현은 제거함 — 원작성자 확인 요망.
+ */
 function BarSegment({
   label,
   amount,
   percent,
   color,
+  onHover,
 }: {
   label: string;
   amount: string;
   percent: number;
   color: string;
+  onHover: (info: HoverSegInfo | null) => void;
 }) {
   return (
     <span
       className="group relative flex cursor-default items-center"
       style={{ width: `${percent}%` }}
+      onMouseEnter={() => onHover({ label, amount, percent })}
+      onMouseLeave={() => onHover(null)}
     >
       {/* 색 막대 — hover 시 두께가 커지며 살짝 떠오른다 */}
       <span
         className={`block h-2.5 w-full rounded-sm transition-all duration-200 group-hover:h-4 group-hover:shadow-[0_2px_8px_-2px_rgba(15,20,24,.35)] ${color}`}
       />
-
-      {/* 툴팁 */}
-      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2.5 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[11.5px] font-semibold text-white opacity-0 shadow-lg transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
-        {label} {amount}원 · {percent}%
-        <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-4 border-t-4 border-x-transparent border-t-ink" />
-      </span>
     </span>
   );
 }
-export default function PlanSheet({ plan, request, version, status, onConfirm, readOnly = false }: Props) {
+export default function PlanSheet({ plan, request, version, status, onConfirm, onRestart, readOnly = false }: Props) {
   const { allocation: al, flight, hotel, days, payment, bookings, start_date, end_date } = plan;
   /** 항공 결제 완료 건 (숙소 결제 payment와 별도) */
   const flightPayment = plan.flight_payment ?? null;
@@ -104,6 +116,9 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
 
   /** 상세 모달이 열려 있는 대상 — 지도/사진/정보를 서비스 안에서 직접 보여준다 */
   const [detailTarget, setDetailTarget] = useState<"flight" | "hotel" | null>(null);
+
+  /** 예산 바에서 hover 중인 구간 (바 위 고정 정보줄에 표시) */
+  const [hoverSeg, setHoverSeg] = useState<HoverSegInfo | null>(null);
 
   /**
    * 확정 모달의 "예약·결제하러 가기": 마이페이지의 계획 상세로 이동.
@@ -282,24 +297,36 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
             {/* 예비비 개념 폐지 — 총예산 전액이 곧 사용 가능 예산.
                 (옛 계획 스냅샷에 reserve 값이 남아 있어도 이제 표시하지 않는다) */}
 
-<div className="flex h-4 items-center gap-0.5 rounded-md">
+            {/* 바 위 고정 정보줄 — hover한 구간의 정보가 여기 표시 (잘림 없음) */}
+            <div className="mb-1 h-[18px] text-right text-[12px] font-semibold text-ink-2">
+              {hoverSeg && (
+                <>
+                  {hoverSeg.label}{" "}
+                  <b className="text-ink">{hoverSeg.amount}원</b> · {hoverSeg.percent}%
+                </>
+              )}
+            </div>
+            <div className="flex h-4 items-center gap-0.5 rounded-md">
               <BarSegment
                 label="항공"
                 amount={formatWon(budgetAl.breakdown.flight_krw)}
                 percent={ratio(budgetAl.breakdown.flight_krw, barDenom)}
                 color="bg-cobalt"
+                onHover={setHoverSeg}
               />
               <BarSegment
                 label="숙소"
                 amount={formatWon(budgetAl.breakdown.hotel_krw)}
                 percent={ratio(budgetAl.breakdown.hotel_krw, barDenom)}
                 color="bg-teal"
+                onHover={setHoverSeg}
               />
               <BarSegment
                 label="일정"
                 amount={formatWon(budgetAl.breakdown.activity_krw)}
                 percent={ratio(budgetAl.breakdown.activity_krw, barDenom)}
                 color="bg-amber"
+                onHover={setHoverSeg}
               />
               {budgetAl.status === "fit" && remaining > 0 && (
                 <BarSegment
@@ -307,6 +334,7 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
                   amount={formatWon(remaining)}
                   percent={ratio(remaining, barDenom)}
                   color="bg-[#d7dce1]"
+                  onHover={setHoverSeg}
                 />
               )}
             </div>
@@ -718,10 +746,14 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, r
 
             <div className="border-t border-line-soft px-6 py-3.5">
               <button
-                onClick={() => setModalOpen(false)}
+                onClick={() => {
+                  // 확정된 계획은 마이페이지에 있으므로 홈은 새 계획을 위해 초기화
+                  setModalOpen(false);
+                  onRestart?.();
+                }}
                 className="w-full rounded-field py-2 text-[13px] font-semibold text-ink-3 transition-colors hover:bg-line-soft hover:text-ink"
               >
-                나중에 할게요 — 계획서에서 언제든 결제할 수 있어요
+                나중에 할게요 — 계획은 마이페이지에 저장돼 있어요
               </button>
             </div>
           </div>

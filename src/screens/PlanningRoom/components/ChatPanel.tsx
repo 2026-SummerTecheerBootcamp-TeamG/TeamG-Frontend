@@ -15,6 +15,28 @@ interface Props {
   onSend: (text: string) => void;
   /** "계획 다시 짜기" — 계획이 그려진 뒤에만 부모가 넘겨준다 (없으면 버튼 미표시) */
   onRestart?: () => void;
+  /** 대화형 수정이 백그라운드에서 진행 중 — 입력창 위 미니 진행 바 표시 */
+  busyEditing?: boolean;
+}
+
+/** 수정 진행 미니 바 — 목표 90%를 향해 지수 감쇠로 부드럽게 다가간다 (완료되면 언마운트) */
+function EditProgressBar() {
+  const [v, setV] = useState(6);
+  useEffect(() => {
+    const id = setInterval(() => setV((x) => x + (92 - x) * 0.035), 80);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="px-[18px] pb-2">
+      <p className="mb-1 text-[11px] font-semibold text-ink-3">계획을 수정하는 중...</p>
+      <div className="h-1 w-full overflow-hidden rounded-full bg-line-soft">
+        <span
+          className="block h-full rounded-full bg-cobalt"
+          style={{ width: `${v}%` }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export default function ChatPanel({
@@ -23,6 +45,7 @@ export default function ChatPanel({
   hideExamples,
   onSend,
   onRestart,
+  busyEditing,
 }: Props) {
   const [value, setValue] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
@@ -118,6 +141,9 @@ export default function ChatPanel({
           </div>
         )}
       </div>
+
+      {/* 수정 진행 중 미니 바 (대화형 수정이 백그라운드에서 도는 동안) */}
+      {busyEditing && <EditProgressBar />}
 
       {/* 입력 */}
       <div className="border-t border-line-soft p-3">
