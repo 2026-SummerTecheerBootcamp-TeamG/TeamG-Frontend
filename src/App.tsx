@@ -6,6 +6,7 @@ import PaymentResult from "@/screens/PaymentResult";
 import PlanningRoom from "@/screens/PlanningRoom";
 import Login from "@/screens/login";
 import Signup from "@/screens/signup";
+import Onboarding from "@/screens/Onboarding";
 import MyPage from "@/screens/MyPage";
 
 export default function App() {
@@ -13,12 +14,18 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route element={<AppLayout />}>
-          {/* 메인: 랜딩 + 챗 + 계획서  (이슈 4·5) */}
-          <Route path="/" element={<PlanningRoom />} />
+          {/* 랜딩: 온보딩 페이지를 루트로 고정 */}
+          <Route path="/" element={<Onboarding />} />
 
           {/* 로그인 / 회원가입 */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+
+          {/* 회원가입 직후에도 동일한 온보딩으로 연결 */}
+          <Route path="/onboarding" element={<Onboarding />} />
+
+          {/* 메인: 챗 + 계획서  (이슈 4·5) */}
+          <Route path="/planningroom" element={<PlanningRoom />} />
 
           {/* 계획서 확정 화면  (이슈 5) */}
           {/* <Route path="/plan/:tripId" element={<PlanConfirm />} /> */}
