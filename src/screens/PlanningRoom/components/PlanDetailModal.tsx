@@ -164,9 +164,10 @@ export default function PlanDetailModal({
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] w-full max-w-[680px] overflow-y-auto rounded-card border border-line bg-white shadow-[0_24px_60px_-16px_rgba(15,20,24,.4)]"
+        className="max-h-[90vh] w-full max-w-[680px] overflow-hidden rounded-card border border-line bg-white shadow-[0_24px_60px_-16px_rgba(15,20,24,.4)]"
         style={{ fontFamily: "Pretendard, sans-serif" }}
       >
+      <div className="max-h-[90vh] overflow-y-auto">
         {/* 헤더 */}
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-line bg-white/95 px-7 pb-4 pt-5 backdrop-blur">
           <div className="min-w-0">
@@ -365,6 +366,7 @@ export default function PlanDetailModal({
             </a>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
