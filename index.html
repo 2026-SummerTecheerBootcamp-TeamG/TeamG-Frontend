@@ -10,6 +10,10 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
     />
+    <!-- 플래닝 룸 상단 배경 사진을 브라우저가 "한가할 때" 미리 받아둔다.
+         prefetch는 preload와 달리 우선순위가 가장 낮아 현재 화면 로딩을 방해하지 않음.
+         온보딩 구경을 마치고 넘어갈 때쯤엔 캐시에 있어 사진 로딩 게이트가 즉시 열림 -->
+    <link rel="prefetch" href="/ex9.jpg" as="image" />
     <title>TripCanvas — AI 여행 플래너</title>
   </head>
   <body>
