@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
+import ScrollToTop from "@/components/layout/ScrollToTop";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
 import PaymentResult from "@/screens/PaymentResult";
@@ -12,6 +13,8 @@ import MyPage from "@/screens/MyPage";
 export default function App() {
   return (
     <AuthProvider>
+      {/* 경로 이동 시 항상 맨 위에서 시작 (온보딩→플래닝룸 이동이 중간부터 보이던 문제) */}
+      <ScrollToTop />
       <Routes>
         <Route element={<AppLayout />}>
           {/* 랜딩: 온보딩 페이지를 루트로 고정 */}

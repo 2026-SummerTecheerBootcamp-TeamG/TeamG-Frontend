@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import ChatPanel from "./components/ChatPanel";
@@ -13,6 +13,24 @@ import { formatWon } from "./lib/parseRequest";
 export default function PlanningRoom() {
   const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
+
+  /**
+   * 상단 배경 사진 로딩 게이트 — 사진만 늦게 떠서 아래 콘텐츠가 먼저 보이던
+   * 어색함(피드백) 해결: 사진이 준비되면 페이지 전체가 함께 fade-in 한다.
+   * 안전망 타이머: 네트워크가 아주 느려도 1.8초 뒤엔 무조건 보여준다
+   * (사진 하나 때문에 서비스가 하얗게 멈춰 보이면 더 나쁨)
+   */
+  const [heroReady, setHeroReady] = useState(false);
+  useEffect(() => {
+    const img = new Image();
+    const done = () => setHeroReady(true);
+    img.onload = done;
+    img.onerror = done;         // 사진이 깨져도 페이지는 열려야 함
+    img.src = "/ex9.jpg";
+    if (img.complete) done();   // 브라우저 캐시에 있으면 즉시 (재방문 시 지연 0)
+    const safety = setTimeout(done, 1800);
+    return () => clearTimeout(safety);
+  }, []);
 
   const { plan, request, status, step, progress, version, error, editing, start, loadExisting, editWithMessage, selectCandidate, confirm, resetPlan } =
     usePlan();
@@ -141,7 +159,11 @@ export default function PlanningRoom() {
   };
 
   return (
-    <div style={{ fontFamily: "Pretendard, sans-serif" }}>
+    // 사진이 준비될 때까지 페이지 전체를 투명하게 — 준비되면 한 몸으로 fade-in
+    <div
+      style={{ fontFamily: "Pretendard, sans-serif" }}
+      className={`transition-opacity duration-500 ${heroReady ? "opacity-100" : "opacity-0"}`}
+    >
       {/* 배경 이미지 섹션 — 전체 너비 */}
       <section
         className="relative pb-5 pt-10 md:pt-14"
