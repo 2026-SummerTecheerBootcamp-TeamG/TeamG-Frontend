@@ -18,7 +18,7 @@ export interface Country {
 export const COUNTRIES: Country[] = [
   // ── 동아시아 ──────────────────────────────
   { code: "KR", name: "대한민국", airports: [
-    { city: "서울", iata: "GMP" }, { city: "인천", iata: "ICN" }, { city: "부산", iata: "PUS" },
+    { city: "서울", iata: "GMP" }, { city: "서울", iata: "ICN" }, { city: "부산", iata: "PUS" },
     { city: "제주", iata: "CJU" }, { city: "대구", iata: "TAE" },
   ]},
   { code: "JP", name: "일본", airports: [

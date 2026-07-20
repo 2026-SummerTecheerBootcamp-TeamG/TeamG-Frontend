@@ -66,7 +66,7 @@ export default function MyPage() {
               마이페이지
             </h1>
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/planningroom")}
               className="rounded-lg border border-line bg-white px-3.5 py-2 text-[13.5px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
             >
               ← 돌아가기
