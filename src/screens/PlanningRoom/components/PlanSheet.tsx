@@ -553,9 +553,8 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="h-[74px] w-[74px] shrink-0 rounded-xl bg-gradient-to-br from-[#20303f] to-[#3c5468]" />
             <div className="flex-1">
-              <p className="text-base font-bold tracking-[-0.025em]">{hotel.name}</p>
+              <p className="text-lg font-bold tracking-[-0.025em]">{hotel.name}</p>
               {hotel.stars !== null && (
                 <p className="mt-1 text-[11.5px] tracking-[0.1em] text-amber">
                   {"★".repeat(hotel.stars)}
