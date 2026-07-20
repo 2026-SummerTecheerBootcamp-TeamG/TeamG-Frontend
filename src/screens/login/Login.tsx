@@ -15,7 +15,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const from = (location.state as { from?: string } | null)?.from ?? "/";
+  const from = (location.state as { from?: string } | null)?.from ?? "/planningroom";
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

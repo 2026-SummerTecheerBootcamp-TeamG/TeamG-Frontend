@@ -84,7 +84,8 @@ export default function Signup() {
       //    (내부에서 토큰 저장 + /users/me/profile 조회까지 함께 수행됨)
       await login(access_token, refresh_token);
 
-      navigate("/", { replace: true });
+      // 가입 직후에는 온보딩을 먼저 보여준다 (완료 시 onboardingStorage.markSeen 후 '/planningroom'으로 이동)
+      navigate("/onboarding", { replace: true });
     } catch (err) {
       const fieldErrors = extractFieldErrors(err);
       setErrors({

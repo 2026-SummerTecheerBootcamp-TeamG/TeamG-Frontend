@@ -18,7 +18,7 @@ export default function Header() {
   const handleAuth = () => {
     if (isLoggedIn) {
       logout();
-      navigate("/");
+      navigate("/planningroom");
     } else {
       navigate("/login");
     }
@@ -28,7 +28,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b border-line bg-white/85 backdrop-blur-md backdrop-saturate-150">
       <nav className="mx-auto flex h-16 max-w-[1240px] items-center justify-between px-5 md:px-7">
         <Link
-          to="/"
+          to="/planningroom"
           className="flex items-center gap-2.5 text-[19px] font-bold tracking-[-0.03em]"
         >
           <Mark />
