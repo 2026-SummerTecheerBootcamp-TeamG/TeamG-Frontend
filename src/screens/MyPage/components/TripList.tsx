@@ -80,7 +80,9 @@ export default function TripList({ trips, onSelect, onDelete, onRename }: Props)
     <div className="rounded-card border border-line bg-paper shadow-[0_1px_2px_rgba(15,20,24,.04)]">
       <div className="flex items-center justify-between border-b border-line-soft px-[22px] py-[18px]">
         <h3 className="text-[15px] font-bold tracking-[-0.025em]">내 계획</h3>
-        <span className="font-mono text-[11px] text-ink-3">{visibleTrips?.length ?? "-"}건</span>
+        <span className="rounded-md bg-line-soft px-2.5 py-1 font-sans text-[13px] font-bold text-ink-2">
+          {visibleTrips?.length ?? "-"}건
+        </span>
       </div>
       {visibleTrips === null ? (
         <div className="px-[22px] py-11 text-center text-sm text-ink-3">불러오는 중...</div>
@@ -194,7 +196,7 @@ export default function TripList({ trips, onSelect, onDelete, onRename }: Props)
                 </span>
 
                 {/* 오른쪽 끝: 가격만 — 버튼은 행 밖의 공통 슬롯으로 (가격↔버튼 간격 통일) */}
-                <span className="shrink-0 whitespace-nowrap font-mono text-[16px] font-extrabold tracking-[-0.02em]">
+                <span className="shrink-0 whitespace-nowrap font-sans text-[16px] font-extrabold tabular-nums tracking-[-0.02em]">
                   {formatWon(trip.total_budget)}원
                 </span>
               </button>

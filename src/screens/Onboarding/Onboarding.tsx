@@ -218,7 +218,7 @@ export default function Onboarding() {
               duration-300: 기본(150ms)보다 여유 있게 — 반전이 부드럽게 보이도록 (피드백) */}
           <button
             onClick={finish}
-            className="mt-8 rounded-full bg-white px-9 py-4 text-[16px] font-bold text-cobalt transition-all duration-300 hover:scale-[1.03] hover:bg-cobalt hover:text-white hover:ring-2 hover:ring-white/80"
+            className="mt-8 rounded-full bg-white px-9 py-4 text-[16px] font-bold text-cobalt transition-all duration-300 hover:scale-[1.03]"
           >
             여행 계획 시작하기 →
           </button>
