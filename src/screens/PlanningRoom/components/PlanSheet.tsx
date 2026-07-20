@@ -545,6 +545,27 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
                   )}
                 </div>
               )}
+              {/* 오는 편(귀국편) 실제 시각 — 첫날/마지막날 일정이 이 시각에 맞춰
+                  조정된 이유를 여기서 바로 확인할 수 있게 함 (구버전 플랜/조회
+                  실패 시 둘 다 null이라 자연히 숨겨짐) */}
+              {(flight.return_departure_time || flight.return_arrival_time) && (
+                <div className="mt-1.5 flex items-center gap-2 border-t border-line-soft pt-1.5">
+                  <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-ink-3">
+                    귀국
+                  </span>
+                  {flight.return_departure_time && (
+                    <span className="text-[13px] font-bold tabular-nums">
+                      {formatClock(flight.return_departure_time)}
+                    </span>
+                  )}
+                  <span className="text-ink-3">→</span>
+                  {flight.return_arrival_time && (
+                    <span className="text-[13px] font-bold tabular-nums">
+                      {formatClock(flight.return_arrival_time)}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             <div className="min-w-[92px] whitespace-nowrap text-right text-sm font-bold">
               {formatWon(budgetAl ? budgetAl.breakdown.flight_krw : flight.price_krw)}원
@@ -675,7 +696,14 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
                     {item.visit_order}
                   </span>
                   <span className="absolute -left-[17px] top-[5px] h-2.5 w-2.5 rounded-full border-[1.5px] border-cobalt bg-white" />
-                  <p className="text-[15px] font-semibold tracking-[-0.02em]">{item.place_name}</p>
+                  <div className="flex items-center gap-2">
+                    {item.arrival_time && (
+                      <span className="shrink-0 rounded-md bg-[#f4f6f8] px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-ink-2">
+                        {item.arrival_time}
+                      </span>
+                    )}
+                    <p className="text-[15px] font-semibold tracking-[-0.02em]">{item.place_name}</p>
+                  </div>
                   {item.place_detail?.address && (
                     <p className="mt-1 break-keep text-[12.5px] text-ink-3">
                       {item.place_detail.address}
@@ -691,12 +719,19 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
                       )}
                     </span>
                   )}
-                  {item.travel_min_to_next != null && (
-                    <span className="mt-2 inline-flex rounded-md bg-[#f4f6f8] px-2 py-0.5 text-[11px] text-ink-2">
-                      다음 장소까지 {item.travel_mode ? `${item.travel_mode} · ` : ""}
-                      {item.travel_min_to_next}분
-                    </span>
-                  )}
+                  <span className="mt-2 flex flex-wrap gap-1.5">
+                    {item.duration_min != null && (
+                      <span className="inline-flex rounded-md bg-[#f4f6f8] px-2 py-0.5 text-[11px] text-ink-2">
+                        체류 약 {item.duration_min}분
+                      </span>
+                    )}
+                    {item.travel_min_to_next != null && (
+                      <span className="inline-flex rounded-md bg-[#f4f6f8] px-2 py-0.5 text-[11px] text-ink-2">
+                        다음 장소까지 {item.travel_mode ? `${item.travel_mode} · ` : ""}
+                        {item.travel_min_to_next}분
+                      </span>
+                    )}
+                  </span>
 
                 </div>
               ))}

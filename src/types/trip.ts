@@ -137,6 +137,9 @@ export interface PlanFlight {
   arrival_time: string | null;
   duration_min: number | null;
   stops: number | null;
+  /** 오는 편(귀국편) 실제 시각 - 조회 실패/구버전 플랜이면 null */
+  return_departure_time: string | null;
+  return_arrival_time: string | null;
 }
 
 export interface PlanHotel {
@@ -168,6 +171,10 @@ export interface PlanItem {
   latitude: number | null;
   longitude: number | null;
   place_detail: PlaceDetail | null;
+  /** 방문 예정 시각 "HH:MM" (항공편 시각 등을 반영해 계산됨, 없으면 null) */
+  arrival_time: string | null;
+  /** 예상 체류 시간(분) */
+  duration_min: number | null;
   travel_min_to_next: number | null;
   travel_mode: string | null;
 }
