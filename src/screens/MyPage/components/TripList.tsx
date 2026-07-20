@@ -87,7 +87,8 @@ export default function TripList({ trips, onSelect, onDelete }: Props) {
                     </span>
                     <StatusBadge status={trip.status} />
                   </span>
-                  <span className="mt-1 block font-mono text-[11.5px] text-ink-3">
+                  {/* 날짜·출발지가 잘 안 보인다는 피드백 → 크기·굵기 업 + 본문 폰트 */}
+                  <span className="mt-1 block text-[13.5px] font-semibold tabular-nums tracking-[-0.01em] text-ink-2">
                     {fmt(trip.start_date)} – {fmt(trip.end_date)} · {trip.departure} 출발
                   </span>
                 </span>
@@ -109,7 +110,9 @@ export default function TripList({ trips, onSelect, onDelete }: Props) {
                   예약·결제 →
                 </button>
               )}
-              {trip.status === "draft" && (
+              {/* processing도 삭제 허용 — 수정 실패로 '생성 중'에 멈춘 좀비 정리용
+                  (정상 생성 중에 지우면 그 실행은 실패하지만, 사용자가 선택한 일) */}
+              {(trip.status === "draft" || trip.status === "processing") && (
                 <button
                   onClick={() => setPendingDelete(trip)}
                   className="mr-3 w-[112px] shrink-0 whitespace-nowrap rounded-field bg-stamp py-3 text-center text-[13px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(216,64,47,.5)] transition-all hover:-translate-y-px hover:bg-[#b93325]"

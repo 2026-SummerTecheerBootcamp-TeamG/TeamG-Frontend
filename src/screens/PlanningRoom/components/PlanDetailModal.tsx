@@ -74,7 +74,15 @@ export default function PlanDetailModal({
   const mapBoxRef = useRef<HTMLDivElement>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [photoIdx, setPhotoIdx] = useState(0);
+  /** 다음 사진이 아직 로딩 중인지 — 이전 사진 위에 스피너 오버레이 표시 */
+  const [imgLoading, setImgLoading] = useState(true);
   const [gInfo, setGInfo] = useState<GooglePlaceInfo | null>(null);
+
+  /** 사진 넘기기 — 로딩 표시를 켜고 인덱스 이동 (onLoad에서 꺼짐) */
+  const goPhoto = (delta: number) => {
+    setImgLoading(true);
+    setPhotoIdx((i) => (i + delta + photos.length) % photos.length);
+  };
 
   // 숙소 모달이 열리면: 미니 지도 + 구글 상세 정보(사진/평점/리뷰/전화/웹) 로드
   useEffect(() => {
@@ -192,7 +200,7 @@ export default function PlanDetailModal({
                 </span>
               )}
               {!isHotel && flight?.route && (
-                <span className="font-mono text-[13.5px] font-bold text-ink-2">
+                <span className="text-[13.5px] font-bold tracking-[0.04em] text-ink-2">
                   {flight.route} (왕복)
                 </span>
               )}
@@ -212,29 +220,45 @@ export default function PlanDetailModal({
             <>
               {/* 사진 캐러셀 — 좌우 버튼으로 넘겨보기 */}
               {photos.length > 0 && (
-                <div className="relative mb-4 overflow-hidden rounded-xl">
+                <div className="relative mb-4 overflow-hidden rounded-xl bg-line-soft">
+                  {/* key=photoIdx: 사진이 바뀔 때마다 새로 마운트 → 전환 애니메이션 재생 */}
                   <img
+                    key={photoIdx}
                     src={photos[photoIdx]}
                     alt={`${hotel.name} 사진 ${photoIdx + 1}`}
-                    className="h-[280px] w-full object-cover"
+                    onLoad={() => setImgLoading(false)}
+                    className="photo-swap h-[280px] w-full object-cover"
                   />
+                  {/* 다음 사진 로딩 중 오버레이 — 회색 반투명 + 흰 스피너 */}
+                  {imgLoading && (
+                    <div className="absolute inset-0 grid place-items-center bg-ink/30 backdrop-blur-[1px]">
+                      <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-white/40 border-t-white" />
+                    </div>
+                  )}
                   {photos.length > 1 && (
                     <>
+                      {/* 화살표: SVG — 굵고 크게, 원 정중앙 정렬 */}
                       <button
-                        onClick={() => setPhotoIdx((i) => (i - 1 + photos.length) % photos.length)}
-                        className="absolute left-2.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-ink/55 text-[15px] text-white backdrop-blur transition-colors hover:bg-ink/75"
+                        onClick={() => goPhoto(-1)}
+                        className="absolute left-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-ink/55 text-white backdrop-blur transition-colors hover:bg-ink/80"
                         aria-label="이전 사진"
                       >
-                        ‹
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                          <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="3"
+                                strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </button>
                       <button
-                        onClick={() => setPhotoIdx((i) => (i + 1) % photos.length)}
-                        className="absolute right-2.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-ink/55 text-[15px] text-white backdrop-blur transition-colors hover:bg-ink/75"
+                        onClick={() => goPhoto(1)}
+                        className="absolute right-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-ink/55 text-white backdrop-blur transition-colors hover:bg-ink/80"
                         aria-label="다음 사진"
                       >
-                        ›
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                          <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="3"
+                                strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                       </button>
-                      <span className="absolute bottom-2.5 right-3 rounded-md bg-ink/60 px-2 py-0.5 font-mono text-[11px] text-white backdrop-blur">
+                      <span className="absolute bottom-2.5 right-3 rounded-md bg-ink/60 px-2 py-1 text-[11px] font-semibold tabular-nums tracking-[0.06em] text-white backdrop-blur">
                         {photoIdx + 1} / {photos.length}
                       </span>
                     </>
@@ -291,29 +315,73 @@ export default function PlanDetailModal({
             </>
           )}
 
-          {!isHotel && flight && (
-            <>
-              {datePart(flight.departure_time) && (
-                <Row label="가는 날">{datePart(flight.departure_time)}</Row>
-              )}
-              {(flight.departure_time || flight.arrival_time) && (
-                <Row label="시간">
-                  {clockPart(flight.departure_time)} 출발
-                  {flight.arrival_time && ` → ${clockPart(flight.arrival_time)} 도착`}
-                </Row>
-              )}
-              {flight.duration_min != null && (
-                <Row label="비행 시간">{fmtDuration(flight.duration_min)}</Row>
-              )}
-              {flight.stops != null && (
-                <Row label="경유">{flight.stops === 0 ? "직항" : `${flight.stops}회 경유`}</Row>
-              )}
-              {pax !== null && <Row label="인원">성인 {pax}명 (왕복 총액 기준)</Row>}
-              <p className="mt-3 rounded-lg bg-paper px-3.5 py-2.5 text-[12px] leading-relaxed text-ink-3">
-                결제가 완료되면 발권이 자동으로 진행되고 예약번호(PNR)가 발급됩니다.
-              </p>
-            </>
-          )}
+          {!isHotel && flight && (() => {
+            // "ICN → DAD" 형태의 노선을 출발/도착 코드로 분리 (없으면 일반 표기)
+            const [fromCode, toCode] = (flight.route ?? "")
+              .split("→")
+              .map((s) => s.trim());
+            return (
+              <>
+                {/* 항공권 스타일 비주얼 — 표 대신 한눈에 보이는 구성 */}
+                <div className="mb-3 rounded-xl bg-paper px-5 pb-7 pt-5">
+                  {datePart(flight.departure_time) && (
+                    <p className="mb-4 text-center text-[12.5px] font-semibold text-ink-3">
+                      {datePart(flight.departure_time)} 출발
+                    </p>
+                  )}
+                  <div className="flex items-center gap-4">
+                    <div className="shrink-0 text-center">
+                      <p className="text-[26px] font-extrabold tabular-nums tracking-[-0.02em]">
+                        {clockPart(flight.departure_time) ?? "--:--"}
+                      </p>
+                      <p className="mt-1 text-[14px] font-extrabold tracking-[0.08em] text-ink-2">
+                        {fromCode || "출발"}
+                      </p>
+                    </div>
+                    {/* 가운데: 점선 항로 + 비행기 + 소요시간 */}
+                    <div className="relative min-w-0 flex-1">
+                      <div className="border-t-2 border-dashed border-line" />
+                      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-paper px-2 text-[17px]">
+                        ✈️
+                      </span>
+                      {flight.duration_min != null && (
+                        <p className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap text-[11.5px] font-semibold text-ink-3">
+                          {fmtDuration(flight.duration_min)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="shrink-0 text-center">
+                      <p className="text-[26px] font-extrabold tabular-nums tracking-[-0.02em]">
+                        {clockPart(flight.arrival_time) ?? "--:--"}
+                      </p>
+                      <p className="mt-1 text-[14px] font-extrabold tracking-[0.08em] text-ink-2">
+                        {toCode || "도착"}
+                      </p>
+                    </div>
+                  </div>
+                  {/* 핵심 조건은 칩으로 */}
+                  <div className="mt-7 flex flex-wrap justify-center gap-1.5">
+                    {flight.stops != null && (
+                      <span className="rounded-full bg-cobalt-soft px-3 py-1 text-[12px] font-bold text-cobalt">
+                        {flight.stops === 0 ? "✓ 직항" : `경유 ${flight.stops}회`}
+                      </span>
+                    )}
+                    <span className="rounded-full bg-cobalt-soft px-3 py-1 text-[12px] font-bold text-cobalt">
+                      왕복
+                    </span>
+                    {pax !== null && (
+                      <span className="rounded-full bg-cobalt-soft px-3 py-1 text-[12px] font-bold text-cobalt">
+                        성인 {pax}명
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <p className="rounded-lg bg-paper px-3.5 py-2.5 text-[12px] leading-relaxed text-ink-3">
+                  ✈️ 결제가 완료되면 발권이 자동으로 진행되고 예약번호(PNR)가 발급됩니다.
+                </p>
+              </>
+            );
+          })()}
 
           {/* 금액 + 결제 — 모달이 결제의 단일 입구 */}
           <div className="mt-4 flex items-center justify-between rounded-field bg-paper px-4 py-3.5">
