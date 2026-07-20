@@ -14,10 +14,12 @@ interface Props {
   /** 슬롯이 다 차면 예시 문장을 감춘다 */
   hideExamples: boolean;
   onSend: (text: string) => void;
-  /** "계획 다시 짜기" — 계획이 그려진 뒤에만 부모가 넘겨준다 (없으면 버튼 미표시) */
+  /** "계획 새로 짜기" — 계획이 그려진 뒤에만 부모가 넘겨준다 (없으면 버튼 미표시) */
   onRestart?: () => void;
-  /** 생성/수정이 돌아가는 중 — 다시 짜기 버튼 잠금 (실행 중 초기화로 인한 꼬임 예방) */
+  /** 생성/수정이 돌아가는 중 — 새로 짜기 버튼 잠금 (실행 중 초기화로 인한 꼬임 예방) */
   restartDisabled?: boolean;
+  /** 생성/수정이 돌아가는 중 — 입력창도 잠근다 (실행 중 새 요청이 겹치는 것 방지, 피드백) */
+  inputDisabled?: boolean;
   /** 대화형 수정이 백그라운드에서 진행 중 — 입력창 위 미니 진행 바 표시 */
   busyEditing?: boolean;
 }
@@ -46,6 +48,7 @@ export default function ChatPanel({
   onSend,
   onRestart,
   restartDisabled,
+  inputDisabled,
   busyEditing,
 }: Props) {
   const [value, setValue] = useState("");
@@ -59,7 +62,7 @@ export default function ChatPanel({
 
   const submit = () => {
     const text = value.trim();
-    if (!text || isTyping) return;
+    if (!text || isTyping || inputDisabled) return;
     onSend(text);
     setValue("");
     if (inputRef.current) inputRef.current.style.height = "auto";
@@ -88,7 +91,7 @@ export default function ChatPanel({
             disabled={restartDisabled}
             className="whitespace-nowrap rounded-lg bg-ink px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-[#2a3138] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ink"
           >
-            계획 다시 짜기
+            계획 새로 짜기
           </button>
         )}
       </div>
@@ -156,18 +159,24 @@ export default function ChatPanel({
             ref={inputRef}
             rows={1}
             value={value}
+            disabled={inputDisabled}
             onChange={(e) => {
               setValue(e.target.value);
               e.target.style.height = "auto";
               e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
             }}
             onKeyDown={handleKeyDown}
-            placeholder="예: 후쿠오카, 9/12~9/14, 2명, 100만원"
-            className="max-h-24 flex-1 resize-none bg-transparent py-1 text-[14.5px] outline-none placeholder:text-[#aeb6be]"
+            // 실행 중에는 입력 불가를 placeholder로도 알려준다
+            placeholder={
+              inputDisabled
+                ? "계획을 만드는 중에는 입력할 수 없어요"
+                : "예: 후쿠오카, 9/12~9/14, 2명, 100만원"
+            }
+            className="max-h-24 flex-1 resize-none bg-transparent py-1 text-[14.5px] outline-none placeholder:text-[#aeb6be] disabled:cursor-not-allowed"
           />
           <button
             onClick={submit}
-            disabled={isTyping || !value.trim()}
+            disabled={isTyping || inputDisabled || !value.trim()}
             aria-label="보내기"
             className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px] bg-ink text-white transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-y-0"
           >

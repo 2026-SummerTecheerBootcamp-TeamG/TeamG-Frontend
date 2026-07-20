@@ -15,6 +15,8 @@ interface Props {
   onSelect: (planId: number) => void;
   /** 미확정 계획 삭제 (확인 모달에서 "삭제" 선택 시 호출) */
   onDelete: (requestId: number) => void;
+  /** 계획 이름 수정 — 성공하면 null, 실패하면 에러 문구를 돌려준다 (인라인 표시용) */
+  onRename: (requestId: number, title: string) => Promise<string | null>;
 }
 
 /** 상태 배지 — 목록에서 계획의 진행 단계를 한눈에 */
@@ -39,9 +41,35 @@ function StatusBadge({ status }: { status: TripSummary["status"] }) {
 }
 
 /** 저장한 계획 목록 — 만든 계획 전부 (미확정 계획도 언제든 다시 열어 수정/확정) */
-export default function TripList({ trips, onSelect, onDelete }: Props) {
+export default function TripList({ trips, onSelect, onDelete, onRename }: Props) {
   /** 삭제 확인 모달이 열려 있는 대상 (null이면 닫힘) */
   const [pendingDelete, setPendingDelete] = useState<TripSummary | null>(null);
+
+  /** 이름 편집 중인 행 (연필 버튼) — 저장 전까지는 draft에만 담아둔다 */
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
+
+  const startRename = (trip: TripSummary) => {
+    setEditingId(trip.request_id);
+    // 현재 보이는 이름으로 시작 (이름이 없으면 목적지 표기 그대로)
+    setTitleDraft(trip.title || trip.destinations.join(" · "));
+    setRenameError(null);
+  };
+
+  const submitRename = async () => {
+    if (editingId === null || savingTitle) return;
+    setSavingTitle(true);
+    const err = await onRename(editingId, titleDraft.trim());
+    setSavingTitle(false);
+    if (err) {
+      setRenameError(err);      // 실패: 편집 상태 유지 + 인라인 안내
+    } else {
+      setEditingId(null);       // 성공: 편집 종료 (목록은 부모가 갱신)
+      setRenameError(null);
+    }
+  };
   // plan이 아직 없는 요청(접수 직후 등)만 제외하고 전부 보여준다.
   // 예전엔 확정본만 노출했는데, "미확정 계획을 다시 불러 수정/확정할 수 없다"는
   // 피드백으로 전체 노출 + 상태 배지 방식으로 변경.
@@ -69,7 +97,48 @@ export default function TripList({ trips, onSelect, onDelete }: Props) {
               key={trip.request_id}
               className="flex items-center gap-3 border-b border-line-soft last:border-b-0"
             >
-              {/* 왼쪽 콘텐츠 = 하나의 클릭 영역 (확정: 상세로 / 미확정: 홈에서 이어서 수정) */}
+              {editingId === trip.request_id ? (
+                /* ── 이름 편집 모드: 행 전체가 편집 폼으로 바뀐다 (행 클릭 이동은 잠시 꺼짐) ── */
+                <div className="flex min-w-0 flex-1 items-center gap-4 rounded-xl px-3 py-4">
+                  <span
+                    className={`grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${chipColors[i % 3]} text-[13px] font-bold text-white`}
+                  >
+                    {trip.destinations[0]?.slice(0, 2) ?? "?"}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <input
+                      autoFocus
+                      value={titleDraft}
+                      maxLength={60}
+                      onChange={(e) => setTitleDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") submitRename();
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                      placeholder="계획 이름 (비우면 목적지로 표시)"
+                      className="w-full rounded-lg border-[1.5px] border-cobalt bg-white px-2.5 py-1.5 text-[14.5px] font-semibold outline-none"
+                    />
+                    {renameError && (
+                      <span className="mt-1 block text-[12px] text-stamp">{renameError}</span>
+                    )}
+                  </span>
+                  <button
+                    onClick={submitRename}
+                    disabled={savingTitle}
+                    className="shrink-0 rounded-field bg-cobalt px-4 py-2 text-[13px] font-bold text-white transition-colors hover:bg-[#1c36c4] disabled:opacity-60"
+                  >
+                    {savingTitle ? "저장 중..." : "저장"}
+                  </button>
+                  <button
+                    onClick={() => setEditingId(null)}
+                    disabled={savingTitle}
+                    className="shrink-0 rounded-field border border-line px-3 py-2 text-[13px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
+                  >
+                    취소
+                  </button>
+                </div>
+              ) : (
+              /* 왼쪽 콘텐츠 = 하나의 클릭 영역 (확정: 상세로 / 미확정: 홈에서 이어서 수정) */
               <button
                 onClick={() => trip.plan_id !== null && onSelect(trip.plan_id)}
                 disabled={trip.status === "processing"}
@@ -82,8 +151,39 @@ export default function TripList({ trips, onSelect, onDelete }: Props) {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
+                    {/* 연필 = 이름 수정 (피드백). 행 버튼 안이라 <button> 중첩이 불가 →
+                        role="button" span + stopPropagation으로 행 클릭(상세 이동)과 분리 */}
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      aria-label="계획 이름 수정"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        startRename(trip);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          startRename(trip);
+                        }
+                      }}
+                      className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-ink-3 transition-colors hover:bg-line-soft hover:text-ink"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                        <path
+                          d="M11.3 1.7a1.7 1.7 0 0 1 2.4 2.4l-8.2 8.2-3.2.8.8-3.2 8.2-8.2Z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
                     <span className="truncate text-base font-bold tracking-[-0.03em]">
-                      {trip.destinations.join(" · ") || "목적지 미정"}
+                      {/* 사용자가 붙인 이름 우선, 없으면 목적지 자동 표기 */}
+                      {trip.title || trip.destinations.join(" · ") || "목적지 미정"}
                     </span>
                     <StatusBadge status={trip.status} />
                   </span>
@@ -98,6 +198,7 @@ export default function TripList({ trips, onSelect, onDelete }: Props) {
                   {formatWon(trip.total_budget)}원
                 </span>
               </button>
+              )}
 
               {/* 오른쪽 공통 버튼 슬롯 — 확정: 예약·결제(파랑, 행 클릭과 같은 동작) /
                   미확정: 삭제(빨강, 확인 모달). 같은 자리·같은 크기(112px)라

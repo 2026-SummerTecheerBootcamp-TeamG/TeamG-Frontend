@@ -50,6 +50,8 @@ export interface Profile {
   email: string;
   nationality: string;
   default_departure: Departure;
+  /** 프로필 사진 — 256×256 정사각형 data URL 문자열 (빈 문자열 = 사진 없음) */
+  profile_image: string;
 }
  
 export const fetchProfile = () =>
@@ -61,6 +63,8 @@ export interface ProfileUpdatePayload {
   email?: string;
   nationality?: string; // ISO 3166-1 alpha-2, 예: "KR"
   default_departure?: Departure;
+  /** 크롭 완료된 정사각형 data URL — 빈 문자열을 보내면 사진 제거 */
+  profile_image?: string;
 }
 
 /** 프로필 수정 — 성공 시 갱신된 Profile을 반환 */

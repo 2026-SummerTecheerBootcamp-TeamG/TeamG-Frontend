@@ -16,6 +16,8 @@ export interface User {
   email: string;
   nationality: string;
   defaultDeparture: { city: string; iata: string };
+  /** 프로필 사진 data URL (빈 문자열 = 없음 → 첫 글자 아바타 표시) */
+  profileImage: string;
 }
 
 interface AuthValue {
@@ -40,6 +42,8 @@ const toUser = (profile: Profile): User => ({
     city: profile.default_departure.city,
     iata: profile.default_departure.iata ?? "",
   },
+  // ?? "": 배포 시차로 서버 응답에 아직 필드가 없어도 안전하게 빈 값 처리
+  profileImage: profile.profile_image ?? "",
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {

@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { updateProfileRequest } from "@/api/auth";
 import { getApiErrorMessage } from "@/lib/api";
 import { nationLabel } from "../lib/options";
+import AvatarCropModal from "./AvatarCropModal";
 // 회원가입과 같은 목록으로 국적/출발지를 "선택"하게 한다 (자유 입력 금지 — 오타 방지)
 import { COUNTRIES } from "@/screens/signup/countries";
 
-/** 마이페이지 프로필 카드 — 조회 + 수정 */
+/** 마이페이지 프로필 카드 — 조회 + 수정 + 사진 변경(업로드→정사각형 크롭) */
 export default function ProfileCard() {
   const { user, updateProfile } = useAuth();
 
@@ -18,7 +19,47 @@ export default function ProfileCard() {
     nickname: "", email: "", nationality: "", city: "", iata: "",
   });
 
+  /* ── 프로필 사진 변경 (피드백) ──────────────────────────────────────
+     업로드 버튼 → 파일 선택(이미지만) → 크롭 모달(정사각형 영역 선택)
+     → [변경] 시 서버 저장, [취소] 시 아무 변화 없음 */
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  /** 크롭 모달에 띄울 원본 이미지 (null이면 모달 닫힘) */
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [photoSaving, setPhotoSaving] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
   if (!user) return null;
+
+  const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // 같은 파일을 다시 골라도 change 이벤트가 다시 오게 초기화
+    if (!file) return;
+    // 이미지 포맷만 허용 — 아니면 경고 문구 (피드백 명세)
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("이미지 파일만 선택할 수 있어요. (jpg, png 등)");
+      return;
+    }
+    setPhotoError(null);
+    // FileReader: 로컬 파일을 data URL 문자열로 읽는다 (서버 업로드 전 미리보기용 표준 방법)
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  /** 크롭 모달의 [변경] — 잘린 정사각형 이미지를 서버에 저장하고 화면에 반영 */
+  const applyCroppedPhoto = async (dataUrl: string) => {
+    setCropSrc(null);
+    setPhotoSaving(true);
+    setPhotoError(null);
+    try {
+      const updated = await updateProfileRequest({ profile_image: dataUrl });
+      updateProfile({ profileImage: updated.profile_image ?? dataUrl });
+    } catch (e) {
+      setPhotoError(getApiErrorMessage(e));
+    } finally {
+      setPhotoSaving(false);
+    }
+  };
 
   /** 현재 국적의 공항 목록 (국적을 바꾸면 출발지 선택지도 바뀜 — 회원가입과 동일 규칙) */
   const airports =
@@ -97,9 +138,36 @@ export default function ProfileCard() {
       </div>
 
       <div className="px-[22px] pb-5 pt-2">
-        {/* 아바타 */}
-        <div className="my-4 grid h-[52px] w-[52px] place-items-center rounded-[14px] bg-gradient-to-br from-ink to-[#3b4a57] text-[19px] font-bold text-white">
-          {(editing ? form.nickname : user.nickname).charAt(0) || "?"}
+        {/* 아바타 — 사진이 있으면 사진, 없으면 닉네임 첫 글자. 크기 확대 + 아래 사진 변경 (피드백) */}
+        <div className="my-4 flex flex-col items-start gap-2">
+          {user.profileImage ? (
+            <img
+              src={user.profileImage}
+              alt="프로필 사진"
+              className="h-[96px] w-[96px] rounded-[20px] object-cover"
+            />
+          ) : (
+            <div className="grid h-[96px] w-[96px] place-items-center rounded-[20px] bg-gradient-to-br from-ink to-[#3b4a57] text-[34px] font-bold text-white">
+              {(editing ? form.nickname : user.nickname).charAt(0) || "?"}
+            </div>
+          )}
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={photoSaving}
+            className="rounded-lg border border-line px-2.5 py-1 text-[12px] font-semibold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink disabled:opacity-60"
+          >
+            {photoSaving ? "저장 중..." : "사진 변경"}
+          </button>
+          {/* 숨겨진 파일 입력 — 버튼이 대신 클릭해 준다. accept로 이미지만 필터 */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFilePick}
+          />
+          {photoError && <p className="text-[12px] text-stamp">{photoError}</p>}
         </div>
 
         {editing ? (
@@ -192,6 +260,15 @@ export default function ProfileCard() {
           </>
         )}
       </div>
+
+      {/* 사진 크롭 모달 — 취소하면 아무것도 바뀌지 않는다 */}
+      {cropSrc && (
+        <AvatarCropModal
+          src={cropSrc}
+          onCancel={() => setCropSrc(null)}
+          onApply={applyCroppedPhoto}
+        />
+      )}
     </div>
   );
 }
