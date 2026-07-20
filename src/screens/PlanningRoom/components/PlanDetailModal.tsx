@@ -76,7 +76,19 @@ export default function PlanDetailModal({
   const [photoIdx, setPhotoIdx] = useState(0);
   /** 다음 사진이 아직 로딩 중인지 — 이전 사진 위에 스피너 오버레이 표시 */
   const [imgLoading, setImgLoading] = useState(true);
+  /** 사진 목록을 구글에서 가져오는 중 — 자리 박스에 회전 스피너 표시.
+      (이전엔 로딩 중 아무것도 없다가 사진이 불쑥 나타났음 — 피드백 반영) */
+  const [photosLoading, setPhotosLoading] = useState(false);
   const [gInfo, setGInfo] = useState<GooglePlaceInfo | null>(null);
+
+  /** 모달이 떠 있는 동안 배경 페이지 스크롤 잠금 (배경이 스크롤되던 현상 — 피드백) */
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
 
   /** 사진 넘기기 — 로딩 표시를 켜고 인덱스 이동 (onLoad에서 꺼짐) */
   const goPhoto = (delta: number) => {
@@ -91,6 +103,11 @@ export default function PlanDetailModal({
     setPhotos([]);
     setPhotoIdx(0);
     setGInfo(null);
+    setPhotosLoading(true);
+    /** 어떤 경로로 끝나든(성공/결과 없음/실패) 스피너를 내리는 단일 종료점 */
+    const donePhotos = () => {
+      if (!cancelled) setPhotosLoading(false);
+    };
 
     loadGoogleMaps()
       .then(() => {
@@ -117,9 +134,9 @@ export default function PlanDetailModal({
             radius: 3000,
           },
           (results, status) => {
-            if (cancelled || status !== google.maps.places.PlacesServiceStatus.OK) return;
+            if (cancelled || status !== google.maps.places.PlacesServiceStatus.OK) return donePhotos();
             const placeId = results?.[0]?.place_id;
-            if (!placeId) return;
+            if (!placeId) return donePhotos();
             svc.getDetails(
               {
                 placeId,
@@ -127,6 +144,7 @@ export default function PlanDetailModal({
                          "formatted_phone_number", "website", "reviews"],
               },
               (place, dStatus) => {
+                donePhotos();
                 if (cancelled || dStatus !== google.maps.places.PlacesServiceStatus.OK || !place) return;
                 setPhotos(
                   (place.photos ?? []).slice(0, 8).map((p) =>
@@ -151,6 +169,7 @@ export default function PlanDetailModal({
       })
       .catch(() => {
         // 지도/사진을 못 불러와도 텍스트 정보만으로 모달은 유효
+        donePhotos();
       });
 
     return () => {
@@ -218,6 +237,13 @@ export default function PlanDetailModal({
         <div className="px-7 py-5">
           {isHotel && hotel && (
             <>
+              {/* 사진 가져오는 중 — 같은 크기의 자리 박스에 회전 스피너 (레이아웃 점프 방지) */}
+              {photosLoading && photos.length === 0 && (
+                <div className="mb-4 grid h-[280px] place-items-center rounded-xl bg-line-soft">
+                  <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-ink/15 border-t-ink/50" />
+                </div>
+              )}
+
               {/* 사진 캐러셀 — 좌우 버튼으로 넘겨보기 */}
               {photos.length > 0 && (
                 <div className="relative mb-4 overflow-hidden rounded-xl bg-line-soft">
@@ -363,7 +389,7 @@ export default function PlanDetailModal({
                   <div className="mt-7 flex flex-wrap justify-center gap-1.5">
                     {flight.stops != null && (
                       <span className="rounded-full bg-cobalt-soft px-3 py-1 text-[12px] font-bold text-cobalt">
-                        {flight.stops === 0 ? "✓ 직항" : `경유 ${flight.stops}회`}
+                        {flight.stops === 0 ? "직항" : `경유 ${flight.stops}회`}
                       </span>
                     )}
                     <span className="rounded-full bg-cobalt-soft px-3 py-1 text-[12px] font-bold text-cobalt">

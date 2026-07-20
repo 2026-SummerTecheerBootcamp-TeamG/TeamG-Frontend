@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { ChatMessage } from "@/types/trip";
+import { useSmoothProgress } from "./PlanProgress";
 
 const EXAMPLES = [
   "후쿠오카, 9/12~9/14, 2명, 100만원",
@@ -15,24 +16,23 @@ interface Props {
   onSend: (text: string) => void;
   /** "계획 다시 짜기" — 계획이 그려진 뒤에만 부모가 넘겨준다 (없으면 버튼 미표시) */
   onRestart?: () => void;
+  /** 생성/수정이 돌아가는 중 — 다시 짜기 버튼 잠금 (실행 중 초기화로 인한 꼬임 예방) */
+  restartDisabled?: boolean;
   /** 대화형 수정이 백그라운드에서 진행 중 — 입력창 위 미니 진행 바 표시 */
   busyEditing?: boolean;
 }
 
-/** 수정 진행 미니 바 — 목표 90%를 향해 지수 감쇠로 부드럽게 다가간다 (완료되면 언마운트) */
+/** 수정 진행 미니 바 — 계획 생성 바와 같은 rAF 스무딩(useSmoothProgress)을 재사용.
+    (이전 setInterval 80ms 방식은 작은 계단이라 생성 바보다 뚝뚝 끊겨 보임 — 피드백) */
 function EditProgressBar() {
-  const [v, setV] = useState(6);
-  useEffect(() => {
-    const id = setInterval(() => setV((x) => x + (92 - x) * 0.035), 80);
-    return () => clearInterval(id);
-  }, []);
+  const v = useSmoothProgress(90); // 목표 90% — 도달 후엔 크리프로 97%까지 살살
   return (
     <div className="px-[18px] pb-2">
       <p className="mb-1 text-[11px] font-semibold text-ink-3">계획을 수정하는 중...</p>
       <div className="h-1 w-full overflow-hidden rounded-full bg-line-soft">
         <span
           className="block h-full rounded-full bg-cobalt"
-          style={{ width: `${v}%` }}
+          style={{ width: `${Math.max(4, v)}%` }} // 시작부터 살짝 차 있어야 "돌고 있다"가 보임
         />
       </div>
     </div>
@@ -45,6 +45,7 @@ export default function ChatPanel({
   hideExamples,
   onSend,
   onRestart,
+  restartDisabled,
   busyEditing,
 }: Props) {
   const [value, setValue] = useState("");
@@ -80,9 +81,12 @@ export default function ChatPanel({
           <span className="font-medium text-ink-3">· 문장으로 적어주세요</span>
         </p>
         {onRestart && (
+          // 생성/수정 실행 중에는 잠금 — 도는 중에 초기화하면 폴링 결과가
+          // 초기화된 화면 위로 덮이는 등 꼬일 수 있어 미리 막는다 (피드백)
           <button
             onClick={onRestart}
-            className="whitespace-nowrap rounded-lg bg-ink px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-[#2a3138]"
+            disabled={restartDisabled}
+            className="whitespace-nowrap rounded-lg bg-ink px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-[#2a3138] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ink"
           >
             계획 다시 짜기
           </button>

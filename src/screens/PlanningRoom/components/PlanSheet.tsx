@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import PlanDetailModal from "./PlanDetailModal";
 import RouteMap from "./RouteMap";
@@ -44,43 +45,55 @@ const formatDuration = (min: number) => {
   return h > 0 ? `${h}시간${m > 0 ? ` ${m}분` : ""}` : `${m}분`;
 };
 
-/** hover 중인 예산 구간 정보 (바 위 고정 정보줄에 표시) */
-interface HoverSegInfo {
-  label: string;
-  amount: string;
-  percent: number;
-}
-
-/**
- * 예산 바의 한 구간 — hover 시 살짝 부풀고, 정보는 바 위의 "고정 정보줄"에 표시.
- * [병합 기록] 같은 잘림 문제를 두 구현이 각자 해결했다: develop의 포탈 툴팁 vs
- * 이 브랜치의 고정 정보줄. 사용자 피드백("맨 위에 고정 표시")을 근거로
- * 정보줄 방식을 채택하고 포탈 구현은 제거함 — 원작성자 확인 요망.
- */
+/** 예산 바의 한 구간 — hover 시 살짝 부풀고, 항목·금액·비율 툴팁을 띄운다.
+    예산 바를 감싼 카드가 overflow-hidden(둥근 모서리용)이라 일반 absolute 배치로는
+    가장자리 구간의 툴팁이 카드 밖에서 잘린다 — body에 포탈로 그려서 우회한다.
+    (한때 "바 위 고정 정보줄" 방식으로 바꿨다가, 사용자 피드백으로
+     이 박스 툴팁 방식 — 원작성자 구현 — 으로 복원함) */
 function BarSegment({
   label,
   amount,
   percent,
   color,
-  onHover,
 }: {
   label: string;
   amount: string;
   percent: number;
   color: string;
-  onHover: (info: HoverSegInfo | null) => void;
 }) {
+  const barRef = useRef<HTMLSpanElement>(null);
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
+
+  const show = () => {
+    const rect = barRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setAnchor({ top: rect.top, left: rect.left + rect.width / 2 });
+  };
+
   return (
     <span
-      className="group relative flex cursor-default items-center"
+      ref={barRef}
+      className="relative flex cursor-default items-center"
       style={{ width: `${percent}%` }}
-      onMouseEnter={() => onHover({ label, amount, percent })}
-      onMouseLeave={() => onHover(null)}
+      onMouseEnter={show}
+      onMouseLeave={() => setAnchor(null)}
     >
       {/* 색 막대 — hover 시 두께가 커지며 살짝 떠오른다 */}
       <span
-        className={`block h-2.5 w-full rounded-sm transition-all duration-200 group-hover:h-4 group-hover:shadow-[0_2px_8px_-2px_rgba(15,20,24,.35)] ${color}`}
+        className={`block h-2.5 w-full rounded-sm transition-all duration-200 ${anchor ? "h-4 shadow-[0_2px_8px_-2px_rgba(15,20,24,.35)]" : ""} ${color}`}
       />
+
+      {anchor &&
+        createPortal(
+          <span
+            className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[11.5px] font-semibold text-white shadow-lg"
+            style={{ top: anchor.top - 10, left: anchor.left }}
+          >
+            {label} {amount}원 · {percent}%
+            <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-4 border-t-4 border-x-transparent border-t-ink" />
+          </span>,
+          document.body,
+        )}
     </span>
   );
 }
@@ -116,9 +129,6 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
 
   /** 상세 모달이 열려 있는 대상 — 지도/사진/정보를 서비스 안에서 직접 보여준다 */
   const [detailTarget, setDetailTarget] = useState<"flight" | "hotel" | null>(null);
-
-  /** 예산 바에서 hover 중인 구간 (바 위 고정 정보줄에 표시) */
-  const [hoverSeg, setHoverSeg] = useState<HoverSegInfo | null>(null);
 
   /**
    * 확정 모달의 "예약·결제하러 가기": 마이페이지의 계획 상세로 이동.
@@ -297,36 +307,24 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
             {/* 예비비 개념 폐지 — 총예산 전액이 곧 사용 가능 예산.
                 (옛 계획 스냅샷에 reserve 값이 남아 있어도 이제 표시하지 않는다) */}
 
-            {/* 바 위 고정 정보줄 — hover한 구간의 정보가 여기 표시 (잘림 없음) */}
-            <div className="mb-1 h-[18px] text-right text-[12px] font-semibold text-ink-2">
-              {hoverSeg && (
-                <>
-                  {hoverSeg.label}{" "}
-                  <b className="text-ink">{hoverSeg.amount}원</b> · {hoverSeg.percent}%
-                </>
-              )}
-            </div>
             <div className="flex h-4 items-center gap-0.5 rounded-md">
               <BarSegment
                 label="항공"
                 amount={formatWon(budgetAl.breakdown.flight_krw)}
                 percent={ratio(budgetAl.breakdown.flight_krw, barDenom)}
                 color="bg-cobalt"
-                onHover={setHoverSeg}
               />
               <BarSegment
                 label="숙소"
                 amount={formatWon(budgetAl.breakdown.hotel_krw)}
                 percent={ratio(budgetAl.breakdown.hotel_krw, barDenom)}
                 color="bg-teal"
-                onHover={setHoverSeg}
               />
               <BarSegment
                 label="일정"
                 amount={formatWon(budgetAl.breakdown.activity_krw)}
                 percent={ratio(budgetAl.breakdown.activity_krw, barDenom)}
                 color="bg-amber"
-                onHover={setHoverSeg}
               />
               {budgetAl.status === "fit" && remaining > 0 && (
                 <BarSegment
@@ -334,7 +332,6 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
                   amount={formatWon(remaining)}
                   percent={ratio(remaining, barDenom)}
                   color="bg-[#d7dce1]"
-                  onHover={setHoverSeg}
                 />
               )}
             </div>
@@ -380,81 +377,27 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
             아래 항목을 예약하면 여행 준비가 끝나요. 이름을 누르면 상세 정보를 볼 수 있어요.
           </p>
 
+          {/* 항공을 위, 숙소를 아래 — 계획서 본문(항공→숙소)과 순서 통일 (피드백).
+              카드 전체가 버튼 하나: 이름 영역과 "상세·결제"가 따로 하이라이팅되던
+              것을 통일 (기능이 같은데 클릭 대상이 둘이면 헷갈림 — 피드백).
+              오른쪽 "상세·결제"는 버튼처럼 보이는 span — 실제 클릭은 카드가 받는다 */}
           <div className="space-y-2.5">
-            {/* 숙소: 토스 결제 → 승인되면 예약까지 자동 진행 */}
-            {hotel && (
-              <div className="rounded-field border border-line bg-white p-4">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-teal/10 text-[15px]">
-                    🏨
-                  </span>
-                  <button
-                    onClick={() => setDetailTarget("hotel")}
-                    className="min-w-0 flex-1 text-left"
-                  >
-                    <p className="truncate text-[14.5px] font-bold tracking-[-0.02em]">
-                      {hotel.name}
-                    </p>
-                    <p className="mt-0.5 text-[11.5px] text-ink-3">
-                      숙소{nights > 0 && ` · ${nights}박`} · <span className="text-cobalt">상세 보기</span>
-                    </p>
-                  </button>
-                  <span className="whitespace-nowrap text-[17px] font-extrabold tracking-[-0.02em]">
-                    {formatWon(budgetAl ? budgetAl.breakdown.hotel_krw : hotel.price_krw)}원
-                  </span>
-                  {payment ? (
-                    <span className="whitespace-nowrap rounded-field bg-teal/10 px-4 py-2.5 text-[13px] font-bold text-teal">
-                      ✓ 결제 완료
-                    </span>
-                  ) : (
-                    // 정보 확인 → 결제 한 흐름: 결제도 상세 모달을 거친다 (모달 하단에 결제 버튼)
-                    <button
-                      onClick={() => setDetailTarget("hotel")}
-                      className="whitespace-nowrap rounded-field bg-cobalt px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)] transition-all hover:-translate-y-px hover:bg-[#1c36c4]"
-                    >
-                      상세·결제
-                    </button>
-                  )}
-                </div>
-
-                {(payment || lastBooking) && (
-                  <div className="mt-3 rounded-lg bg-teal/5 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-ink-2">
-                    {payment && (
-                      <p>
-                        ✓ {formatWon(payment.amount)}원 · {payment.method} ·{" "}
-                        {formatDateTime(payment.approved_at)} 결제 완료
-                      </p>
-                    )}
-                    {lastBooking && (
-                      <p className={lastBooking.status === "confirmed" ? "font-semibold text-teal" : "font-semibold text-stamp"}>
-                        {lastBooking.status === "confirmed"
-                          ? `✓ 예약 확정${lastBooking.confirmation ? ` · 확인번호 ${lastBooking.confirmation}` : ""}`
-                          : "예약에 실패했어요. 잠시 후 다시 시도해 주세요."}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 항공: 발권 규제로 직접 결제 대신 항공사/예매처 딥링크로 안내 */}
+            {/* 항공: 결제(토스) → 승인되면 발권까지 자동 진행 */}
             {flight && (
-              <div className="rounded-field border border-line bg-white p-4">
-                <div className="flex items-center gap-3">
+              <div className="rounded-field border border-line bg-white transition-colors hover:border-cobalt/50">
+                <button
+                  onClick={() => setDetailTarget("flight")}
+                  className="flex w-full items-center gap-3 p-4 text-left"
+                >
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cobalt-soft text-[15px]">
                     ✈️
                   </span>
-                  <button
-                    onClick={() => setDetailTarget("flight")}
-                    className="min-w-0 flex-1 text-left"
-                  >
-                    <p className="truncate text-[14.5px] font-bold tracking-[-0.02em]">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14.5px] font-bold tracking-[-0.02em]">
                       {flight.airline}
-                    </p>
-                    <p className="mt-0.5 text-[11.5px] text-ink-3">
-                      항공 · <span className="text-cobalt">상세 보기</span>
-                    </p>
-                  </button>
+                    </span>
+                    <span className="mt-0.5 block text-[11.5px] text-ink-3">항공</span>
+                  </span>
                   <span className="whitespace-nowrap text-[17px] font-extrabold tracking-[-0.02em]">
                     {formatWon(budgetAl ? budgetAl.breakdown.flight_krw : flight.price_krw)}원
                   </span>
@@ -463,17 +406,14 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
                       ✓ 결제 완료
                     </span>
                   ) : (
-                    <button
-                      onClick={() => setDetailTarget("flight")}
-                      className="whitespace-nowrap rounded-field bg-cobalt px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)] transition-all hover:-translate-y-px hover:bg-[#1c36c4]"
-                    >
+                    <span className="whitespace-nowrap rounded-field bg-cobalt px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)]">
                       상세·결제
-                    </button>
+                    </span>
                   )}
-                </div>
+                </button>
 
                 {(issuedPnr || flightPayment) && (
-                  <div className="mt-3 rounded-lg bg-teal/5 px-3.5 py-2.5 text-[12.5px] leading-relaxed">
+                  <div className="mx-4 mb-4 rounded-lg bg-teal/5 px-3.5 py-2.5 text-[12.5px] leading-relaxed">
                     {flightPayment && (
                       <p className="text-ink-2">
                         ✓ {formatWon(flightPayment.amount)}원 · {flightPayment.method} ·{" "}
@@ -489,6 +429,59 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
                         발권 처리 중입니다 — 잠시 후 새로고침하면 PNR이 표시됩니다.
                       </p>
                     ) : null}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 숙소: 토스 결제 → 승인되면 예약까지 자동 진행 */}
+            {hotel && (
+              <div className="rounded-field border border-line bg-white transition-colors hover:border-cobalt/50">
+                <button
+                  onClick={() => setDetailTarget("hotel")}
+                  className="flex w-full items-center gap-3 p-4 text-left"
+                >
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-teal/10 text-[15px]">
+                    🏨
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14.5px] font-bold tracking-[-0.02em]">
+                      {hotel.name}
+                    </span>
+                    <span className="mt-0.5 block text-[11.5px] text-ink-3">
+                      숙소{nights > 0 && ` · ${nights}박`}
+                    </span>
+                  </span>
+                  <span className="whitespace-nowrap text-[17px] font-extrabold tracking-[-0.02em]">
+                    {formatWon(budgetAl ? budgetAl.breakdown.hotel_krw : hotel.price_krw)}원
+                  </span>
+                  {payment ? (
+                    <span className="whitespace-nowrap rounded-field bg-teal/10 px-4 py-2.5 text-[13px] font-bold text-teal">
+                      ✓ 결제 완료
+                    </span>
+                  ) : (
+                    // 정보 확인 → 결제 한 흐름: 결제도 상세 모달을 거친다 (모달 하단에 결제 버튼)
+                    <span className="whitespace-nowrap rounded-field bg-cobalt px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(39,67,224,.5)]">
+                      상세·결제
+                    </span>
+                  )}
+                </button>
+
+                {(payment || lastBooking) && (
+                  <div className="mx-4 mb-4 rounded-lg bg-teal/5 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-ink-2">
+                    {payment && (
+                      <p>
+                        ✓ {formatWon(payment.amount)}원 · {payment.method} ·{" "}
+                        {formatDateTime(payment.approved_at)} 결제 완료
+                      </p>
+                    )}
+                    {lastBooking && (
+                      <p className={lastBooking.status === "confirmed" ? "font-semibold text-teal" : "font-semibold text-stamp"}>
+                        {lastBooking.status === "confirmed"
+                          ? `✓ 예약 확정${lastBooking.confirmation ? ` · 확인번호 ${lastBooking.confirmation}` : ""}`
+                          : "예약에 실패했어요. 잠시 후 다시 시도해 주세요."}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -536,13 +529,16 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
 
             </div>
           </div>
-          {/* 외부 링크 대신 서비스 안 상세 모달로 (노선/시간/결제까지 한 화면) */}
-          <button
-            onClick={() => setDetailTarget("flight")}
-            className="mt-3.5 w-full rounded-field border-[1.5px] border-cobalt py-2.5 text-[13.5px] font-bold text-cobalt transition-colors hover:bg-cobalt-soft"
-          >
-            항공편 상세 정보 보기
-          </button>
+          {/* 외부 링크 대신 서비스 안 상세 모달로 (노선/시간/결제까지 한 화면).
+              확정 후에는 위 예약·결제 패널 카드가 같은 모달을 열므로 중복 제거 (피드백) */}
+          {!confirmed && (
+            <button
+              onClick={() => setDetailTarget("flight")}
+              className="mt-3.5 w-full rounded-field border-[1.5px] border-cobalt py-2.5 text-[13.5px] font-bold text-cobalt transition-colors hover:bg-cobalt-soft"
+            >
+              항공편 상세 정보 보기
+            </button>
+          )}
         </div>
       )}
 
@@ -581,13 +577,16 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
               )}
             </div>
           </div>
-          {/* 외부 링크 대신 서비스 안 상세 모달로 (지도/사진/평점/결제까지 한 화면) */}
-          <button
-            onClick={() => setDetailTarget("hotel")}
-            className="mt-3.5 w-full rounded-field border-[1.5px] border-cobalt py-2.5 text-[13.5px] font-bold text-cobalt transition-colors hover:bg-cobalt-soft"
-          >
-            숙소 상세 정보 · 사진 보기
-          </button>
+          {/* 외부 링크 대신 서비스 안 상세 모달로 (지도/사진/평점/결제까지 한 화면).
+              확정 후에는 위 예약·결제 패널 카드가 같은 모달을 열므로 중복 제거 (피드백) */}
+          {!confirmed && (
+            <button
+              onClick={() => setDetailTarget("hotel")}
+              className="mt-3.5 w-full rounded-field border-[1.5px] border-cobalt py-2.5 text-[13.5px] font-bold text-cobalt transition-colors hover:bg-cobalt-soft"
+            >
+              숙소 상세 정보 · 사진 보기
+            </button>
+          )}
 
         </div>
       )}
