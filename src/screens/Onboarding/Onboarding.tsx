@@ -55,7 +55,8 @@ export default function Onboarding() {
               여행은 당신에게
             </h1>
             <p className="mt-9 max-w-[440px] text-[16px] leading-relaxed text-ink-2">
-              날짜와 인원만 말해주세요. 숙소·일정·동선까지 AI가 한 번에
+              날짜와 인원만 말해주세요.
+              숙소·일정·동선까지 AI가 한 번에
               정리해드립니다.
             </p>
 
