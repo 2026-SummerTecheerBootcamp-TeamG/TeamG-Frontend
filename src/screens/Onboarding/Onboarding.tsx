@@ -214,11 +214,10 @@ export default function Onboarding() {
           <p className="mt-3 text-[16px] text-white/80">
             지금 시작하면 몇 분 안에 첫 여행 계획이 완성돼요.
           </p>
-          {/* hover: 흰 배경 → 파란 배경 + 흰 글자 반전, 살짝 커짐.
-              duration-300: 기본(150ms)보다 여유 있게 — 반전이 부드럽게 보이도록 (피드백) */}
+          {/* hover: 살짝 커지기만 하는 흰 버튼 — 색 반전은 시도 후 롤백 (파란 배경에 묻혀 보임) */}
           <button
             onClick={finish}
-            className="mt-8 rounded-full bg-white px-9 py-4 text-[16px] font-bold text-cobalt transition-all duration-300 hover:scale-[1.03] hover:bg-cobalt hover:text-white hover:ring-2 hover:ring-white/80"
+            className="mt-8 rounded-full bg-white px-9 py-4 text-[16px] font-bold text-cobalt transition-transform hover:scale-[1.03]"
           >
             여행 계획 시작하기 →
           </button>
