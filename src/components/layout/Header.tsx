@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
 /** 서비스 로고 마크 */
@@ -14,11 +14,20 @@ function Mark() {
 export default function Header() {
   const { isLoggedIn, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleAuth = () => {
     if (isLoggedIn) {
       logout();
-      navigate("/planningroom");
+      // 로그인이 필요한 화면(마이페이지/결제)에 있었다면 온보딩으로 내보내고,
+      // 온보딩·플래닝룸 같은 공개 화면이면 그 자리에 그대로 둔다
+      // (예전엔 무조건 /planningroom으로 보내서 온보딩에서 로그아웃하면 화면이 튀었음 — 피드백)
+      if (
+        location.pathname.startsWith("/mypage") ||
+        location.pathname.startsWith("/payment")
+      ) {
+        navigate("/");
+      }
     } else {
       navigate("/login");
     }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import FeatureSection from "./components/FeatureSection";
 import Reveal from "./components/Reveal";
@@ -19,6 +20,7 @@ const SLOT_CHIPS = ["8/10 – 8/13", "도쿄", "2인", "100만원"];
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -29,6 +31,12 @@ export default function Onboarding() {
 
   const finish = () => {
     onboardingStorage.markSeen();
+    // 비로그인 상태면 로그인부터 — 로그인 성공 시 state.from을 따라
+    // 플래닝 룸으로 자연스럽게 이어진다 (Login.tsx의 복귀 로직, 피드백 반영)
+    if (!isLoggedIn) {
+      navigate("/login", { state: { from: "/planningroom" } });
+      return;
+    }
     navigate("/planningroom", { replace: true });
   };
 
