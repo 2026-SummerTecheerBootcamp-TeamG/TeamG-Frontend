@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import PlanDetailModal from "./PlanDetailModal";
 import RouteMap from "./RouteMap";
@@ -42,7 +43,9 @@ const formatDuration = (min: number) => {
   return h > 0 ? `${h}시간${m > 0 ? ` ${m}분` : ""}` : `${m}분`;
 };
 
-/** 예산 바의 한 구간 — hover 시 살짝 부풀고, 항목·금액·비율 툴팁을 띄운다 */
+/** 예산 바의 한 구간 — hover 시 살짝 부풀고, 항목·금액·비율 툴팁을 띄운다.
+    예산 바를 감싼 카드가 overflow-hidden(둥근 모서리용)이라 일반 absolute 배치로는
+    가장자리 구간의 툴팁이 카드 밖에서 잘린다 — body에 포탈로 그려서 우회한다. */
 function BarSegment({
   label,
   amount,
@@ -54,21 +57,39 @@ function BarSegment({
   percent: number;
   color: string;
 }) {
+  const barRef = useRef<HTMLSpanElement>(null);
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
+
+  const show = () => {
+    const rect = barRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setAnchor({ top: rect.top, left: rect.left + rect.width / 2 });
+  };
+
   return (
     <span
-      className="group relative flex cursor-default items-center"
+      ref={barRef}
+      className="relative flex cursor-default items-center"
       style={{ width: `${percent}%` }}
+      onMouseEnter={show}
+      onMouseLeave={() => setAnchor(null)}
     >
       {/* 색 막대 — hover 시 두께가 커지며 살짝 떠오른다 */}
       <span
-        className={`block h-2.5 w-full rounded-sm transition-all duration-200 group-hover:h-4 group-hover:shadow-[0_2px_8px_-2px_rgba(15,20,24,.35)] ${color}`}
+        className={`block h-2.5 w-full rounded-sm transition-all duration-200 ${anchor ? "h-4 shadow-[0_2px_8px_-2px_rgba(15,20,24,.35)]" : ""} ${color}`}
       />
 
-      {/* 툴팁 */}
-      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2.5 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[11.5px] font-semibold text-white opacity-0 shadow-lg transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
-        {label} {amount}원 · {percent}%
-        <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-4 border-t-4 border-x-transparent border-t-ink" />
-      </span>
+      {anchor &&
+        createPortal(
+          <span
+            className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[11.5px] font-semibold text-white shadow-lg"
+            style={{ top: anchor.top - 10, left: anchor.left }}
+          >
+            {label} {amount}원 · {percent}%
+            <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-4 border-t-4 border-x-transparent border-t-ink" />
+          </span>,
+          document.body,
+        )}
     </span>
   );
 }
