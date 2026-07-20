@@ -7,6 +7,7 @@ import {
   editPlan,
   getPlan,
   getRun,
+  selectPlanCandidate,
 } from "@/api/trips";
 
 const POLL_INTERVAL = 1500;
@@ -124,6 +125,23 @@ export function usePlan() {
     return detail;
   }, []);
 
+  /**
+   * 후보 비교 UI에서 항공/숙소 교체 선택 — 서버가 재검색 없이 재배분해
+   * 새 버전을 만들어 주므로(동기, 수 초 안), 받은 새 버전으로 화면을 갱신한다.
+   * 반환: 챗에 띄울 요약 문구 (실패 시 throw — 호출부가 안내)
+   */
+  const selectCandidate = useCallback(
+    async (kind: "flight" | "hotel", index: number) => {
+      if (!plan) return null;
+      const res = await selectPlanCandidate(plan.plan_id, kind, index);
+      const detail = await getPlan(res.new_plan_id);
+      setPlan(detail);
+      setVersion((v) => v + 1);   // 버전 증가 → 계획서 상단 스크롤도 함께 동작
+      return res.summary;
+    },
+    [plan],
+  );
+
   /** 문장으로 들어온 수정 요청 */
   const editWithMessage = useCallback(
     async (text: string): Promise<{ note: string }> => {
@@ -212,7 +230,7 @@ export function usePlan() {
   }, [plan]);
 
   // 병합: 팀원의 progress(진행률 %) + 우리의 resetPlan(계획 다시 짜기) 모두 노출
-  return { plan, request, status, step, progress, version, error, editing, start, loadExisting, editWithMessage, confirm, resetPlan };
+  return { plan, request, status, step, progress, version, error, editing, start, loadExisting, editWithMessage, selectCandidate, confirm, resetPlan };
 }
 
 /**

@@ -14,7 +14,7 @@ export default function PlanningRoom() {
   const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
 
-  const { plan, request, status, step, progress, version, error, editing, start, loadExisting, editWithMessage, confirm, resetPlan } =
+  const { plan, request, status, step, progress, version, error, editing, start, loadExisting, editWithMessage, selectCandidate, confirm, resetPlan } =
     usePlan();
 
   const chat = useChat({
@@ -103,6 +103,17 @@ export default function PlanningRoom() {
     notifiedStatusRef.current = null;   // 다음 계획의 완료 안내가 다시 뜨도록
     restoredPlanRef.current = null;     // 다음 불러오기의 대화 복원이 다시 되도록
     chat.notify("새 계획을 시작합니다. 이전 계획은 마이페이지에 저장되어 있어요.");
+  };
+
+  /** 후보 비교에서 항공/숙소 교체 — 성공 요약은 챗으로, 실패는 다시 던져 모달 유지 */
+  const handleSelectCandidate = async (kind: "flight" | "hotel", index: number) => {
+    try {
+      const summary = await selectCandidate(kind, index);
+      if (summary) chat.notify(summary);
+    } catch (e) {
+      chat.notify(`후보를 변경하지 못했습니다. (${getApiErrorMessage(e)})`);
+      throw e; // PlanSheet가 모달을 닫지 않고 다시 고를 수 있게
+    }
   };
 
   /** 계획 생성: 로그인 안 했으면 로그인 화면으로 보낸다 */
@@ -216,6 +227,7 @@ export default function PlanningRoom() {
                 status={status}
                 onConfirm={handleConfirm}
                 onRestart={handleRestart}
+                onSelectCandidate={handleSelectCandidate}
               />
             )}
           </div>

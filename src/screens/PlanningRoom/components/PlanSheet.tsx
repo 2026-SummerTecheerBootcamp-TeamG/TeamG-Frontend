@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
+import CandidateCompareModal from "./CandidateCompareModal";
 import PlanDetailModal from "./PlanDetailModal";
 import RouteMap from "./RouteMap";
 import type { ParsedFields, PlanDetail, PlanStatus } from "@/types/trip";
@@ -17,6 +18,8 @@ interface Props {
   onConfirm: () => void;
   /** 확정 모달의 "나중에 할게요" — 홈 화면을 초기화 (계획은 마이페이지에 저장됨) */
   onRestart?: () => void;
+  /** 후보 비교에서 항공/숙소 교체 선택 — 홈 워크벤치에서만 전달 (실패 시 throw) */
+  onSelectCandidate?: (kind: "flight" | "hotel", index: number) => Promise<void>;
   /** 읽기 전용 (마이페이지 상세): 확정 버튼·도장을 숨긴다 */
   readOnly?: boolean;
 }
@@ -97,7 +100,7 @@ function BarSegment({
     </span>
   );
 }
-export default function PlanSheet({ plan, request, version, status, onConfirm, onRestart, readOnly = false }: Props) {
+export default function PlanSheet({ plan, request, version, status, onConfirm, onRestart, onSelectCandidate, readOnly = false }: Props) {
   const { allocation: al, flight, hotel, days, payment, bookings, start_date, end_date } = plan;
   /** 항공 결제 완료 건 (숙소 결제 payment와 별도) */
   const flightPayment = plan.flight_payment ?? null;
@@ -129,6 +132,25 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
 
   /** 상세 모달이 열려 있는 대상 — 지도/사진/정보를 서비스 안에서 직접 보여준다 */
   const [detailTarget, setDetailTarget] = useState<"flight" | "hotel" | null>(null);
+
+  /** 후보 비교 모달 (멘토 피드백: 채팅 말고도 직접 비교·선택) */
+  const [compareTarget, setCompareTarget] = useState<"flight" | "hotel" | null>(null);
+  const [pickingIndex, setPickingIndex] = useState<number | null>(null);
+  const flightCands = plan.candidates?.flights ?? [];
+  const hotelCands = plan.candidates?.hotels ?? [];
+
+  const handlePickCandidate = async (index: number) => {
+    if (!onSelectCandidate || !compareTarget) return;
+    setPickingIndex(index);
+    try {
+      await onSelectCandidate(compareTarget, index);
+      setCompareTarget(null);   // 성공 시에만 닫음 — 새 버전이 화면에 반영된다
+    } catch {
+      // 실패 안내는 부모(챗 알림)가 담당 — 모달은 열린 채 유지해 다시 고를 수 있게
+    } finally {
+      setPickingIndex(null);
+    }
+  };
 
   /**
    * 확정 모달의 "예약·결제하러 가기": 마이페이지의 계획 상세로 이동.
@@ -532,12 +554,23 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
           {/* 외부 링크 대신 서비스 안 상세 모달로 (노선/시간/결제까지 한 화면).
               확정 후에는 위 예약·결제 패널 카드가 같은 모달을 열므로 중복 제거 (피드백) */}
           {!confirmed && (
-            <button
-              onClick={() => setDetailTarget("flight")}
-              className="mt-3.5 w-full rounded-field border-[1.5px] border-cobalt py-2.5 text-[13.5px] font-bold text-cobalt transition-colors hover:bg-cobalt-soft"
-            >
-              항공편 상세 정보 보기
-            </button>
+            <div className="mt-3.5 flex gap-2">
+              <button
+                onClick={() => setDetailTarget("flight")}
+                className="flex-1 rounded-field border-[1.5px] border-cobalt py-2.5 text-[13.5px] font-bold text-cobalt transition-colors hover:bg-cobalt-soft"
+              >
+                항공편 상세 정보 보기
+              </button>
+              {/* 후보가 2개 이상일 때만 비교 의미가 있음. 홈 워크벤치(교체 가능)에서만 노출 */}
+              {flightCands.length > 1 && onSelectCandidate && (
+                <button
+                  onClick={() => setCompareTarget("flight")}
+                  className="flex-1 rounded-field border-[1.5px] border-line py-2.5 text-[13.5px] font-bold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
+                >
+                  다른 항공편 비교 ({flightCands.length})
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -579,12 +612,22 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
           {/* 외부 링크 대신 서비스 안 상세 모달로 (지도/사진/평점/결제까지 한 화면).
               확정 후에는 위 예약·결제 패널 카드가 같은 모달을 열므로 중복 제거 (피드백) */}
           {!confirmed && (
-            <button
-              onClick={() => setDetailTarget("hotel")}
-              className="mt-3.5 w-full rounded-field border-[1.5px] border-cobalt py-2.5 text-[13.5px] font-bold text-cobalt transition-colors hover:bg-cobalt-soft"
-            >
-              숙소 상세 정보 · 사진 보기
-            </button>
+            <div className="mt-3.5 flex gap-2">
+              <button
+                onClick={() => setDetailTarget("hotel")}
+                className="flex-1 rounded-field border-[1.5px] border-cobalt py-2.5 text-[13.5px] font-bold text-cobalt transition-colors hover:bg-cobalt-soft"
+              >
+                숙소 상세 정보 · 사진 보기
+              </button>
+              {hotelCands.length > 1 && onSelectCandidate && (
+                <button
+                  onClick={() => setCompareTarget("hotel")}
+                  className="flex-1 rounded-field border-[1.5px] border-line py-2.5 text-[13.5px] font-bold text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
+                >
+                  다른 숙소 비교 ({hotelCands.length})
+                </button>
+              )}
+            </div>
           )}
 
         </div>
@@ -756,6 +799,19 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
             </div>
           </div>
         </div>
+      )}
+
+      {/* 후보 비교 모달 — 검색 당시 후보를 표로 비교하고 바로 교체 선택 */}
+      {compareTarget && (
+        <CandidateCompareModal
+          kind={compareTarget}
+          flights={flightCands}
+          hotels={hotelCands}
+          canChange={!confirmed && !readOnly && !!onSelectCandidate}
+          pickingIndex={pickingIndex}
+          onPick={handlePickCandidate}
+          onClose={() => setCompareTarget(null)}
+        />
       )}
 
       {/* 항공/숙소 상세 모달 — 지도·사진·정보·결제를 서비스 안에서 */}
