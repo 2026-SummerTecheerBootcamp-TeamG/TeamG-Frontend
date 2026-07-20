@@ -13,6 +13,12 @@ import type {
 export const listTrips = () =>
   api.get<{ trips: TripSummary[] }>("/trips/").then((res) => res.data.trips);
 
+/** PATCH /api/v1/trips/{request_id}/title - 계획 이름 수정 (빈 문자열 = 이름 제거) */
+export const updateTripTitle = (requestId: number, title: string) =>
+  api
+    .patch<{ request_id: number; title: string }>(`/trips/${requestId}/title`, { title })
+    .then((res) => res.data);
+
 /** POST /api/v1/agents/parse - 자연어 → 구조화 슬롯 */
 export const parseMessage = (message: string) =>
   api.post<ParseResult>("/agents/parse", { message }).then((res) => res.data);

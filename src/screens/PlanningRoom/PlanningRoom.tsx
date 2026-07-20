@@ -94,7 +94,7 @@ export default function PlanningRoom() {
   }, [status, version, error]);
 
   /**
-   * "계획 다시 짜기": 챗과 오른쪽 화면을 초기 상태로.
+   * "계획 새로 짜기": 챗과 오른쪽 화면을 초기 상태로.
    * 짜던 계획은 이미 draft로 저장돼 있어 마이페이지 목록에 그대로 남는다.
    */
   const handleRestart = () => {
@@ -168,8 +168,9 @@ export default function PlanningRoom() {
             onSend={handleSend}
             // 초기 화면에서는 다시 짤 것이 없으므로 버튼 숨김
             onRestart={status !== "idle" ? handleRestart : undefined}
-            // 생성 중(building)·수정 중(editing)에는 버튼을 잠가 실행 중 초기화를 예방
+            // 생성 중(building)·수정 중(editing)에는 새로 짜기 버튼과 입력창을 모두 잠근다
             restartDisabled={status === "building" || editing}
+            inputDisabled={status === "building" || editing}
             busyEditing={editing}
           />
 

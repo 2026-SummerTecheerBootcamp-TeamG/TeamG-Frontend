@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import ProfileCard from "./components/ProfileCard";
 import TripList from "./components/TripList";
 import TripDetail from "./components/TripDetail";
-import { deleteTrip, listTrips } from "@/api/trips";
+import { deleteTrip, listTrips, updateTripTitle } from "@/api/trips";
 import { getApiErrorMessage } from "@/lib/api";
 import type { TripSummary } from "@/types/trip";
 
@@ -48,6 +48,23 @@ export default function MyPage() {
     }
   };
 
+  /** 계획 이름 수정 — 성공 시 목록만 갱신하고 null, 실패 시 에러 문구 반환 (인라인 표시) */
+  const handleRename = async (requestId: number, title: string) => {
+    try {
+      const res = await updateTripTitle(requestId, title);
+      setTrips(
+        (prev) =>
+          prev?.map((t) =>
+            t.request_id === requestId ? { ...t, title: res.title } : t,
+          ) ?? null,
+      );
+      return null;
+    } catch (e) {
+      // 전역 error state를 쓰면 목록 전체가 에러 화면으로 바뀌므로 문구만 돌려준다
+      return getApiErrorMessage(e);
+    }
+  };
+
   useEffect(() => {
     listTrips()
       .then(setTrips)
@@ -80,7 +97,12 @@ export default function MyPage() {
                 {error}
               </p>
             ) : (
-              <TripList trips={trips} onSelect={selectPlan} onDelete={handleDelete} />
+              <TripList
+                trips={trips}
+                onSelect={selectPlan}
+                onDelete={handleDelete}
+                onRename={handleRename}
+              />
             )}
           </div>
         </>
