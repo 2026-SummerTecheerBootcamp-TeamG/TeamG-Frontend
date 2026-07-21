@@ -24,6 +24,10 @@ interface Props {
   hotels: HotelCandidate[];
   /** "ICN → FUK" — 항공 후보들의 공통 노선 (요청 단위라 후보마다 같음) */
   route: string | null;
+  /** 현재 선택된 항공편의 귀국 시각 — 귀국 시각은 "선택된 편"에 대해서만
+      조회되는 구조라(검색 단계엔 없음) 현재 선택 카드에만 표시할 수 있다 */
+  returnDepartureTime: string | null;
+  returnArrivalTime: string | null;
   /** 변경 가능 여부 — 확정된 계획(결제 진입 상태)에서는 보기만 */
   canChange: boolean;
   /** 변경 요청이 진행 중인 후보 index (버튼 로딩 표시) */
@@ -48,7 +52,15 @@ const fmtDuration = (min: number) => {
 
 /* ───────── 항공 상세 (펼침 영역): 항공권 스타일 비주얼 ───────── */
 
-function FlightCandidateDetail({ f, route }: { f: FlightCandidate; route: string | null }) {
+function FlightCandidateDetail({
+  f, route, returnDep, returnArr,
+}: {
+  f: FlightCandidate;
+  route: string | null;
+  /** 귀국 시각 — 현재 선택된 후보일 때만 값이 있다 (다른 후보는 미조회 상태) */
+  returnDep: string | null;
+  returnArr: string | null;
+}) {
   const [fromCode, toCode] = (route ?? "").split("→").map((s) => s.trim());
   return (
     <div className="rounded-xl bg-paper px-5 pb-7 pt-5">
@@ -97,6 +109,21 @@ function FlightCandidateDetail({ f, route }: { f: FlightCandidate; route: string
           왕복
         </span>
       </div>
+
+      {/* 귀국편: 선택된 편만 시각이 조회돼 있다 — 나머지는 왜 없는지 안내 */}
+      {returnDep || returnArr ? (
+        <p className="mt-4 text-center text-[12px] text-ink-2">
+          귀국편 {clock(returnDep) ?? "--:--"}
+          {returnArr && <> → {clock(returnArr)}</>}
+          {datePart(returnDep) && (
+            <span className="text-ink-3"> · {datePart(returnDep)}</span>
+          )}
+        </p>
+      ) : (
+        <p className="mt-4 text-center text-[11.5px] text-ink-3">
+          귀국편 시각은 이 후보로 변경하면 함께 조회돼요 · 표시 가격은 왕복 총액입니다
+        </p>
+      )}
     </div>
   );
 }
@@ -302,7 +329,8 @@ function HotelCandidateDetail({ h }: { h: HotelCandidate }) {
 /* ───────── 모달 본체 ───────── */
 
 export default function CandidateCompareModal({
-  kind, flights, hotels, route, canChange, pickingIndex, onPick, onClose,
+  kind, flights, hotels, route, returnDepartureTime, returnArrivalTime,
+  canChange, pickingIndex, onPick, onClose,
 }: Props) {
   const isFlight = kind === "flight";
   const [sort, setSort] = useState<SortKey>("recommend");
@@ -459,6 +487,14 @@ export default function CandidateCompareModal({
                       )}
                       {h?.address && <span className="text-ink-3">{h.address}</span>}
                     </p>
+                    {/* 현재 선택 편의 귀국 시각을 작게 표시 (피드백) —
+                        귀국 시각은 선택된 편에 대해서만 조회되는 구조 */}
+                    {f && row.selected && (returnDepartureTime || returnArrivalTime) && (
+                      <p className="mt-0.5 text-[11.5px] text-ink-3">
+                        귀국 {clock(returnDepartureTime) ?? "--:--"}
+                        {returnArrivalTime && <> → {clock(returnArrivalTime)}</>}
+                      </p>
+                    )}
                     {/* 예산 초과 예고 — 변경은 막지 않되(사용자 자유) 결과를 미리 알림.
                         산식은 서버가 배분 엔진과 동일하게 계산한 over_budget 플래그 */}
                     {row.over_budget && !row.selected && (
@@ -488,7 +524,12 @@ export default function CandidateCompareModal({
                 {expanded && (
                   <div className="mt-3 border-t border-line-soft pt-3">
                     {f ? (
-                      <FlightCandidateDetail f={f} route={route} />
+                      <FlightCandidateDetail
+                        f={f}
+                        route={route}
+                        returnDep={row.selected ? returnDepartureTime : null}
+                        returnArr={row.selected ? returnArrivalTime : null}
+                      />
                     ) : (
                       <HotelCandidateDetail h={h!} />
                     )}

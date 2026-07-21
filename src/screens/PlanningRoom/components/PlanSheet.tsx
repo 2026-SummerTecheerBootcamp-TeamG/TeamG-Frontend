@@ -846,6 +846,8 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
           flights={flightCands}
           hotels={hotelCands}
           route={flight?.route ?? null}
+          returnDepartureTime={flight?.return_departure_time ?? null}
+          returnArrivalTime={flight?.return_arrival_time ?? null}
           canChange={!confirmed && !readOnly && !!onSelectCandidate}
           pickingIndex={pickingIndex}
           onPick={handlePickCandidate}
