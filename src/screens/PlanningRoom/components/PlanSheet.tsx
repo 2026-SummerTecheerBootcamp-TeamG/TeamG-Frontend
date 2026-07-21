@@ -318,7 +318,10 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
               </span>
             </div>
 
-            {budgetAl.status === "insufficient" && (
+            {/* 초과 안내 배너는 "만드는 중"에만 — 확정 후(마이페이지 포함)에는
+                "왼쪽 채팅으로 바꿔보세요" 같은 문구가 성립하지 않는다 (피드백).
+                빨간 배지·빨간 금액은 유지되어 초과 사실 자체는 계속 보인다 */}
+            {budgetAl.status === "insufficient" && !confirmed && (
               <p className="mb-3 rounded-field border border-stamp/30 bg-stamp/5 px-3 py-2 text-[12.5px] font-semibold text-stamp">
                 총예산 {formatWon(budgetAl.total_budget)}원보다 {formatWon(overBudget)}원
                 초과했어요. 아래는 가장 저렴한 조합 기준이에요 — 예산을 늘리거나,

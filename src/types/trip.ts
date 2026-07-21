@@ -216,6 +216,8 @@ export interface FlightCandidate {
   arrival_time: string | null;
   duration_min: number | null;
   stops: number | null;
+  /** 이 후보로 바꾸면 예산 초과 예상 (엔진과 같은 산식 — 경고 문구 근거) */
+  over_budget: boolean;
   /** 현재 이 플랜이 선택 중인 후보인지 ("현재 선택" 배지) */
   selected: boolean;
 }
@@ -232,6 +234,8 @@ export interface HotelCandidate {
   /** 상세 펼침의 미니 지도용 좌표 */
   latitude: number | null;
   longitude: number | null;
+  /** 이 후보로 바꾸면 예산 초과 예상 (경고 문구 근거) */
+  over_budget: boolean;
   selected: boolean;
 }
 
@@ -272,6 +276,8 @@ export interface TripSummary {
   total_budget: number;
   plan_id: number | null;
   status: "processing" | "draft" | "confirmed" | null;
+  /** 계획안 총 비용 — "총 비용 / 예산" 표시용 (배분 전이면 null) */
+  total_cost?: number | null;
   created_at: string;
 }
 
