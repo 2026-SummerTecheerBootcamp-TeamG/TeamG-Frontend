@@ -97,17 +97,19 @@ export default function PlanProgress({ current, progress }: Props) {
             }`}
           >
             <div className="flex items-center gap-3.5">
-              <span
-                className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-[1.5px] text-[10px] text-white transition-colors ${
-                  done
-                    ? "border-ink bg-ink"
-                    : running
-                      ? "animate-pulse border-cobalt bg-white"
-                      : "border-line bg-white"
-                }`}
-              >
-                {done && "✓"}
-              </span>
+              {/* 진행 중 단계는 "돌아가며 잔상을 남기는 원"(스피너) — 바가 잠시
+                  느려져도 작업이 계속되고 있음을 보여준다 (피드백) */}
+              {running ? (
+                <span className="h-5 w-5 shrink-0 animate-spin rounded-full border-[2.5px] border-cobalt/25 border-t-cobalt" />
+              ) : (
+                <span
+                  className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-[1.5px] text-[10px] text-white transition-colors ${
+                    done ? "border-ink bg-ink" : "border-line bg-white"
+                  }`}
+                >
+                  {done && "✓"}
+                </span>
+              )}
               <span className="text-[14.5px] font-semibold tracking-[-0.02em]">
                 {label}
               </span>
