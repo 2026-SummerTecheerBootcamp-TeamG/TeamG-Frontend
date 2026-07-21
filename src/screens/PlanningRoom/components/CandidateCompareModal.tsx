@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FlightCandidate, HotelCandidate } from "@/types/trip";
+import { fetchCandidateReturnLeg } from "@/api/trips";
 import { loadGoogleMaps } from "@/lib/googleMaps";
 import { formatWon } from "../lib/parseRequest";
 
@@ -18,8 +19,13 @@ import { formatWon } from "../lib/parseRequest";
 
 type SortKey = "recommend" | "price";
 
+/** 후보별 귀국 시각 상태 — loading(조회 중) / none(조회 불가·실패) / 값 */
+type ReturnLeg = { dep: string | null; arr: string | null } | "loading" | "none";
+
 interface Props {
   kind: "flight" | "hotel";
+  /** 귀국 시각 즉석 조회 API에 필요한 플랜 id */
+  planId: number;
   flights: FlightCandidate[];
   hotels: HotelCandidate[];
   /** "ICN → FUK" — 항공 후보들의 공통 노선 (요청 단위라 후보마다 같음) */
@@ -53,13 +59,12 @@ const fmtDuration = (min: number) => {
 /* ───────── 항공 상세 (펼침 영역): 항공권 스타일 비주얼 ───────── */
 
 function FlightCandidateDetail({
-  f, route, returnDep, returnArr,
+  f, route, returnLeg,
 }: {
   f: FlightCandidate;
   route: string | null;
-  /** 귀국 시각 — 현재 선택된 후보일 때만 값이 있다 (다른 후보는 미조회 상태) */
-  returnDep: string | null;
-  returnArr: string | null;
+  /** 귀국 시각 상태 — 펼치는 순간 즉석 조회가 시작되므로 loading → 값/none 순서 */
+  returnLeg: ReturnLeg;
 }) {
   const [fromCode, toCode] = (route ?? "").split("→").map((s) => s.trim());
   return (
@@ -110,18 +115,23 @@ function FlightCandidateDetail({
         </span>
       </div>
 
-      {/* 귀국편: 선택된 편만 시각이 조회돼 있다 — 나머지는 왜 없는지 안내 */}
-      {returnDep || returnArr ? (
+      {/* 귀국편 — 펼치는 순간 즉석 조회 (조회 중 → 시각 표시 / 실패 시 안내) */}
+      {returnLeg === "loading" ? (
+        <p className="mt-4 flex items-center justify-center gap-1.5 text-[11.5px] text-ink-3">
+          <span className="h-3 w-3 animate-spin rounded-full border-[2px] border-cobalt/25 border-t-cobalt" />
+          귀국편 시각 조회 중...
+        </p>
+      ) : returnLeg !== "none" && (returnLeg.dep || returnLeg.arr) ? (
         <p className="mt-4 text-center text-[12px] text-ink-2">
-          귀국편 {clock(returnDep) ?? "--:--"}
-          {returnArr && <> → {clock(returnArr)}</>}
-          {datePart(returnDep) && (
-            <span className="text-ink-3"> · {datePart(returnDep)}</span>
+          귀국편 {clock(returnLeg.dep) ?? "--:--"}
+          {returnLeg.arr && <> → {clock(returnLeg.arr)}</>}
+          {datePart(returnLeg.dep) && (
+            <span className="text-ink-3"> · {datePart(returnLeg.dep)}</span>
           )}
         </p>
       ) : (
         <p className="mt-4 text-center text-[11.5px] text-ink-3">
-          귀국편 시각은 이 후보로 변경하면 함께 조회돼요 · 표시 가격은 왕복 총액입니다
+          귀국편 시각을 확인하지 못했어요 · 표시 가격은 왕복 총액입니다
         </p>
       )}
     </div>
@@ -329,7 +339,7 @@ function HotelCandidateDetail({ h }: { h: HotelCandidate }) {
 /* ───────── 모달 본체 ───────── */
 
 export default function CandidateCompareModal({
-  kind, flights, hotels, route, returnDepartureTime, returnArrivalTime,
+  kind, planId, flights, hotels, route, returnDepartureTime, returnArrivalTime,
   canChange, pickingIndex, onPick, onClose,
 }: Props) {
   const isFlight = kind === "flight";
@@ -338,6 +348,41 @@ export default function CandidateCompareModal({
   const [directOnly, setDirectOnly] = useState(false);
   /** 상세가 펼쳐진 후보 index (한 번에 하나 — 다른 카드를 펼치면 이전 것은 접힘) */
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  /** 즉석 조회한 귀국 시각 (index별) — 서버도 캐시하므로 재펼침은 빠름 */
+  const [returnLegs, setReturnLegs] = useState<Record<number, ReturnLeg>>({});
+
+  /** 항공 후보의 귀국 시각을 어느 출처로든 알아낸다 (본체 값 → 선택편 props → 조회 상태) */
+  const resolveReturn = (f: FlightCandidate): ReturnLeg => {
+    if (f.return_departure_time || f.return_arrival_time)
+      return { dep: f.return_departure_time, arr: f.return_arrival_time };
+    if (f.selected && (returnDepartureTime || returnArrivalTime))
+      return { dep: returnDepartureTime, arr: returnArrivalTime };
+    // 펼치는 순간 조회가 시작되므로, 상태가 아직 없으면 = 방금 시작 = 조회 중
+    return returnLegs[f.index] ?? "loading";
+  };
+
+  /** 펼치기/접기 — 항공 후보를 펼치면 귀국 시각이 없을 때 즉석 조회를 시작 */
+  const toggleExpand = (row: FlightCandidate | HotelCandidate, wasExpanded: boolean) => {
+    setExpandedIndex(wasExpanded ? null : row.index);
+    if (wasExpanded || !isFlight) return;
+    const f = row as FlightCandidate;
+    const known =
+      f.return_departure_time ||
+      (f.selected && (returnDepartureTime || returnArrivalTime)) ||
+      returnLegs[f.index];
+    if (known) return;
+    setReturnLegs((m) => ({ ...m, [f.index]: "loading" }));
+    fetchCandidateReturnLeg(planId, f.index)
+      .then((res) =>
+        setReturnLegs((m) => ({
+          ...m,
+          [f.index]: res.available
+            ? { dep: res.return_departure_time ?? null, arr: res.return_arrival_time ?? null }
+            : "none",
+        })),
+      )
+      .catch(() => setReturnLegs((m) => ({ ...m, [f.index]: "none" })));
+  };
 
   /** 모달이 떠 있는 동안 배경 스크롤 잠금 */
   useEffect(() => {
@@ -487,14 +532,19 @@ export default function CandidateCompareModal({
                       )}
                       {h?.address && <span className="text-ink-3">{h.address}</span>}
                     </p>
-                    {/* 현재 선택 편의 귀국 시각을 작게 표시 (피드백) —
-                        귀국 시각은 선택된 편에 대해서만 조회되는 구조 */}
-                    {f && row.selected && (returnDepartureTime || returnArrivalTime) && (
-                      <p className="mt-0.5 text-[11.5px] text-ink-3">
-                        귀국 {clock(returnDepartureTime) ?? "--:--"}
-                        {returnArrivalTime && <> → {clock(returnArrivalTime)}</>}
-                      </p>
-                    )}
+                    {/* 귀국 시각을 작게 표시 (피드백) — 본체 값 또는 선택편 값이
+                        있을 때만 (없는 후보는 펼치면 즉석 조회됨) */}
+                    {f && (() => {
+                      const rl = resolveReturn(f);
+                      if (rl === "loading" || rl === "none" || (!rl.dep && !rl.arr))
+                        return null;
+                      return (
+                        <p className="mt-0.5 text-[11.5px] text-ink-3">
+                          귀국 {clock(rl.dep) ?? "--:--"}
+                          {rl.arr && <> → {clock(rl.arr)}</>}
+                        </p>
+                      );
+                    })()}
                     {/* 예산 초과 예고 — 변경은 막지 않되(사용자 자유) 결과를 미리 알림.
                         산식은 서버가 배분 엔진과 동일하게 계산한 over_budget 플래그 */}
                     {row.over_budget && !row.selected && (
@@ -502,11 +552,10 @@ export default function CandidateCompareModal({
                         ⚠ 이 후보로 변경하면 예산을 초과해요
                       </p>
                     )}
-                    {/* 상세 펼치기/접기 — 밑줄 텍스트 + 방향 화살표 (피드백 명세) */}
+                    {/* 상세 펼치기/접기 — 밑줄 텍스트 + 방향 화살표 (피드백 명세).
+                        항공 후보는 펼치는 순간 귀국 시각 즉석 조회도 시작된다 */}
                     <button
-                      onClick={() =>
-                        setExpandedIndex(expanded ? null : row.index)
-                      }
+                      onClick={() => toggleExpand(row, expanded)}
                       className="mt-1.5 text-[12px] font-semibold text-ink-3 underline underline-offset-2 transition-colors hover:text-ink"
                     >
                       {expanded ? "접기 ▲" : "상세 정보 펼치기 ▼"}
@@ -527,8 +576,7 @@ export default function CandidateCompareModal({
                       <FlightCandidateDetail
                         f={f}
                         route={route}
-                        returnDep={row.selected ? returnDepartureTime : null}
-                        returnArr={row.selected ? returnArrivalTime : null}
+                        returnLeg={resolveReturn(f)}
                       />
                     ) : (
                       <HotelCandidateDetail h={h!} />
