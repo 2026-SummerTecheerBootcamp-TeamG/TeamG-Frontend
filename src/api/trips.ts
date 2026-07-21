@@ -27,6 +27,17 @@ export const selectPlanCandidate = (
     )
     .then((res) => res.data);
 
+/** GET /api/v1/trips/plans/{plan_id}/candidates/flight/{index}/return
+    후보 항공편의 귀국 시각 즉석 조회 — 상세 펼침에서 사용, 서버가 결과를 캐시 */
+export const fetchCandidateReturnLeg = (planId: number, index: number) =>
+  api
+    .get<{
+      available: boolean;
+      return_departure_time?: string | null;
+      return_arrival_time?: string | null;
+    }>(`/trips/plans/${planId}/candidates/flight/${index}/return`)
+    .then((res) => res.data);
+
 /** PATCH /api/v1/trips/{request_id}/title - 계획 이름 수정 (빈 문자열 = 이름 제거) */
 export const updateTripTitle = (requestId: number, title: string) =>
   api

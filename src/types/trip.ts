@@ -216,6 +216,9 @@ export interface FlightCandidate {
   arrival_time: string | null;
   duration_min: number | null;
   stops: number | null;
+  /** 귀국 시각 — 조회된 후보만 값이 있음 (없으면 상세 펼침 때 즉석 조회 API 사용) */
+  return_departure_time: string | null;
+  return_arrival_time: string | null;
   /** 이 후보로 바꾸면 예산 초과 예상 (엔진과 같은 산식 — 경고 문구 근거) */
   over_budget: boolean;
   /** 현재 이 플랜이 선택 중인 후보인지 ("현재 선택" 배지) */

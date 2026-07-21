@@ -843,6 +843,7 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
       {compareTarget && (
         <CandidateCompareModal
           kind={compareTarget}
+          planId={plan.plan_id}
           flights={flightCands}
           hotels={hotelCands}
           route={flight?.route ?? null}
