@@ -394,14 +394,23 @@ export default function CandidateCompareModal({
   }, []);
 
   /** 정렬·필터 적용된 목록 — useMemo: 기준이 바뀔 때만 다시 계산.
-      추천순은 내부 utility 점수 기준 (점수 자체는 화면에 노출하지 않음 — 피드백) */
+      항공 추천순은 내부 utility 점수 기준(화면에 노출하지 않음 — 피드백),
+      숙소 추천순은 성급(stars) 높은 순 — utility가 가격과 상관이 높아
+      가격순과 구분이 안 되는 문제가 있었음 */
   const rows = useMemo(() => {
     const base: (FlightCandidate | HotelCandidate)[] = isFlight
       ? flights.filter((f) => !directOnly || f.stops === 0)
       : hotels;
     const sorted = [...base];
-    if (sort === "price") sorted.sort((a, b) => a.price_krw - b.price_krw);
-    else sorted.sort((a, b) => (b.utility ?? 0) - (a.utility ?? 0));
+    if (sort === "price") {
+      sorted.sort((a, b) => a.price_krw - b.price_krw);
+    } else if (isFlight) {
+      sorted.sort((a, b) => (b.utility ?? 0) - (a.utility ?? 0));
+    } else {
+      sorted.sort(
+        (a, b) => ((b as HotelCandidate).stars ?? 0) - ((a as HotelCandidate).stars ?? 0),
+      );
+    }
     return sorted;
   }, [isFlight, flights, hotels, sort, directOnly]);
 
@@ -509,6 +518,16 @@ export default function CandidateCompareModal({
                       <span className="truncate text-[14.5px] font-bold tracking-[-0.02em]">
                         {name}
                       </span>
+                      {/* 숙소 성급 — 추천순 정렬 기준(stars)을 눈으로도 확인할 수 있게 */}
+                      {h?.stars != null && (
+                        <span
+                          className="shrink-0 tracking-[0.1em] text-amber"
+                          aria-label={`${h.stars}성급`}
+                        >
+                          {"★".repeat(h.stars)}
+                          {"☆".repeat(Math.max(0, 5 - h.stars))}
+                        </span>
+                      )}
                       {row.selected && (
                         <span className="shrink-0 rounded-md bg-cobalt px-1.5 py-0.5 text-[10.5px] font-bold text-white">
                           현재 선택
