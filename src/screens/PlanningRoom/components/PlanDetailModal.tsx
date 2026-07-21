@@ -403,6 +403,43 @@ export default function PlanDetailModal({
                     )}
                   </div>
                 </div>
+
+                {/* 오는 편(귀국편) — 실제 조회에 성공했을 때만 표시 (구버전 플랜/조회
+                    실패 시 둘 다 null이라 자연히 숨겨짐) */}
+                {(flight.return_departure_time || flight.return_arrival_time) && (
+                  <div className="mb-3 rounded-xl bg-paper px-5 pb-7 pt-5">
+                    <p className="mb-4 text-center text-[12.5px] font-semibold text-ink-3">
+                      귀국
+                      {datePart(flight.return_departure_time) &&
+                        ` · ${datePart(flight.return_departure_time)} 출발`}
+                    </p>
+                    <div className="flex items-center gap-4">
+                      <div className="shrink-0 text-center">
+                        <p className="text-[26px] font-extrabold tabular-nums tracking-[-0.02em]">
+                          {clockPart(flight.return_departure_time) ?? "--:--"}
+                        </p>
+                        <p className="mt-1 text-[14px] font-extrabold tracking-[0.08em] text-ink-2">
+                          {toCode || "출발"}
+                        </p>
+                      </div>
+                      <div className="relative min-w-0 flex-1">
+                        <div className="border-t-2 border-dashed border-line" />
+                        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-paper px-2 text-[17px]">
+                          ✈️
+                        </span>
+                      </div>
+                      <div className="shrink-0 text-center">
+                        <p className="text-[26px] font-extrabold tabular-nums tracking-[-0.02em]">
+                          {clockPart(flight.return_arrival_time) ?? "--:--"}
+                        </p>
+                        <p className="mt-1 text-[14px] font-extrabold tracking-[0.08em] text-ink-2">
+                          {fromCode || "도착"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <p className="rounded-lg bg-paper px-3.5 py-2.5 text-[12px] leading-relaxed text-ink-3">
                   ✈️ 결제가 완료되면 발권이 자동으로 진행되고 예약번호(PNR)가 발급됩니다.
                 </p>
