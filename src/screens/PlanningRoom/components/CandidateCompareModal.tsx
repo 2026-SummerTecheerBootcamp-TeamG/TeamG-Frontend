@@ -459,6 +459,13 @@ export default function CandidateCompareModal({
                       )}
                       {h?.address && <span className="text-ink-3">{h.address}</span>}
                     </p>
+                    {/* 예산 초과 예고 — 변경은 막지 않되(사용자 자유) 결과를 미리 알림.
+                        산식은 서버가 배분 엔진과 동일하게 계산한 over_budget 플래그 */}
+                    {row.over_budget && !row.selected && (
+                      <p className="mt-1 text-[11.5px] font-semibold text-stamp">
+                        ⚠ 이 후보로 변경하면 예산을 초과해요
+                      </p>
+                    )}
                     {/* 상세 펼치기/접기 — 밑줄 텍스트 + 방향 화살표 (피드백 명세) */}
                     <button
                       onClick={() =>
