@@ -246,7 +246,6 @@ export default function PlanningRoom() {
               <PlanSheet
                 plan={plan}
                 request={request}
-                version={version}
                 status={status}
                 onConfirm={handleConfirm}
                 onRestart={handleRestart}
