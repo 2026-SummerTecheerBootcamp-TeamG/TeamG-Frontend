@@ -56,7 +56,6 @@ export default function TripDetail({ planId, onBack }: Props) {
           <PlanSheet
             plan={plan}
             request={null}
-            version={1}
             status={plan.status === "confirmed" ? "confirmed" : "ready"}
             onConfirm={() => {}}
             readOnly
