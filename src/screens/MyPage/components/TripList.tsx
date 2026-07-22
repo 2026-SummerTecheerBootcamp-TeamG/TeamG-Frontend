@@ -197,6 +197,20 @@ export default function TripList({ trips, onSelect, onDelete, onRename }: Props)
 
                 {/* 오른쪽 끝: 가격만 — 버튼은 행 밖의 공통 슬롯으로 (가격↔버튼 간격 통일) */}
                 <span className="shrink-0 whitespace-nowrap font-sans text-[16px] font-extrabold tabular-nums tracking-[-0.02em]">
+                  {/* 총 비용 / 예산 — 계획안이 예산 안인지 한눈에 (피드백).
+                      초과면 총 비용만 빨간색, 배분 전(비용 없음)이면 예산만 표시 */}
+                  {trip.total_cost != null && (
+                    <>
+                      <span
+                        className={
+                          trip.total_cost > trip.total_budget ? "text-stamp" : ""
+                        }
+                      >
+                        {formatWon(trip.total_cost)}
+                      </span>
+                      <span className="font-medium text-ink-3"> / </span>
+                    </>
+                  )}
                   {formatWon(trip.total_budget)}원
                 </span>
               </button>

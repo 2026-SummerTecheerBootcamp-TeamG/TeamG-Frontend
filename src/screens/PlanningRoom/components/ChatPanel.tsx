@@ -25,12 +25,19 @@ interface Props {
 }
 
 /** 수정 진행 미니 바 — 계획 생성 바와 같은 rAF 스무딩(useSmoothProgress)을 재사용.
-    (이전 setInterval 80ms 방식은 작은 계단이라 생성 바보다 뚝뚝 끊겨 보임 — 피드백) */
+    목표 70: 90으로 하면 초반에 확 차오르고 끝에서 오래 멈춰 보였다(피드백) —
+    낮은 목표에 빨리 닿은 뒤 크리프(초당 1.2%)가 수정이 끝날 때까지 계속
+    전진하는 그림이 실제 소요 시간과 더 잘 맞는다. 회전 스피너가 "지금도
+    돌아가는 중"을 항상 보여줘 바가 느려져도 멈춘 걸로 오해하지 않게 한다 */
 function EditProgressBar() {
-  const v = useSmoothProgress(90); // 목표 90% — 도달 후엔 크리프로 97%까지 살살
+  const v = useSmoothProgress(70);
   return (
     <div className="px-[18px] pb-2">
-      <p className="mb-1 text-[11px] font-semibold text-ink-3">계획을 수정하는 중...</p>
+      <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-ink-3">
+        {/* 돌아가며 잔상을 남기는 원 (피드백) — 위쪽만 진한 테두리가 회전 */}
+        <span className="h-3 w-3 animate-spin rounded-full border-[2px] border-cobalt/25 border-t-cobalt" />
+        계획을 수정하는 중...
+      </p>
       <div className="h-1 w-full overflow-hidden rounded-full bg-line-soft">
         <span
           className="block h-full rounded-full bg-cobalt"

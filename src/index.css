@@ -78,12 +78,19 @@
   animation: photo-in 0.18s ease;
 }
 
-/* 모션 최소화 설정 존중 */
+/* 모션 최소화 설정 존중 — 장식용 모션(리빌/바운스/사진 전환 등)을 끈다.
+   단, 로딩 스피너(animate-spin)는 예외: 장식이 아니라 "지금 작업 중"을 알리는
+   상태 표시 수단이라 꺼지면 멈춘 것처럼 보인다 (WCAG도 필수 모션은 예외 인정).
+   실사고: Windows 애니메이션 효과를 끈 환경에서 스피너가 전부 정지해 보였음 */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+  .animate-spin {
+    /* 클래스 선택자(0,1,0)가 *(0,0,0)보다 구체적이라 이 선언이 이긴다 */
+    animation: var(--animate-spin) !important;
   }
 }

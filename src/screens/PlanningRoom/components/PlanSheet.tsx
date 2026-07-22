@@ -13,7 +13,6 @@ import { formatWon, getNightsFromDates } from "../lib/parseRequest";
 interface Props {
   plan: PlanDetail;
   request: ParsedFields | null;
-  version: number;
   status: PlanStatus;
   onConfirm: () => void;
   /** 확정 모달의 "나중에 할게요" — 홈 화면을 초기화 (계획은 마이페이지에 저장됨) */
@@ -100,7 +99,7 @@ function BarSegment({
     </span>
   );
 }
-export default function PlanSheet({ plan, request, version, status, onConfirm, onRestart, onSelectCandidate, readOnly = false }: Props) {
+export default function PlanSheet({ plan, request, status, onConfirm, onRestart, onSelectCandidate, readOnly = false }: Props) {
   const { allocation: al, flight, hotel, days, payment, bookings, start_date, end_date } = plan;
   /** 항공 결제 완료 건 (숙소 결제 payment와 별도) */
   const flightPayment = plan.flight_payment ?? null;
@@ -254,12 +253,8 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
           )}
 
         </div>
-        <span
-          className="shrink-0 rounded-md border border-line px-1.5 py-0.5 text-[10.5px] text-ink-3"
-          style={{ fontFamily: "Pretendard, sans-serif" }}
-        >
-          v{version}
-        </span>
+        {/* 버전 배지(v1, v2)는 제거 — 버전은 내부 관리 개념이라 사용자에게 불필요 (피드백).
+            버전 이력 자체는 DB에 그대로 쌓이고 롤백·대화 복원도 영향 없음 */}
       </div>
 
       {/* 확정 CTA — 맨 아래에만 있으면 처음 쓰는 사용자가 "확정" 존재를 모를 수
@@ -318,7 +313,10 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
               </span>
             </div>
 
-            {budgetAl.status === "insufficient" && (
+            {/* 초과 안내 배너는 "만드는 중"에만 — 확정 후(마이페이지 포함)에는
+                "왼쪽 채팅으로 바꿔보세요" 같은 문구가 성립하지 않는다 (피드백).
+                빨간 배지·빨간 금액은 유지되어 초과 사실 자체는 계속 보인다 */}
+            {budgetAl.status === "insufficient" && !confirmed && (
               <p className="mb-3 rounded-field border border-stamp/30 bg-stamp/5 px-3 py-2 text-[12.5px] font-semibold text-stamp">
                 총예산 {formatWon(budgetAl.total_budget)}원보다 {formatWon(overBudget)}원
                 초과했어요. 아래는 가장 저렴한 조합 기준이에요 — 예산을 늘리거나,
@@ -840,9 +838,12 @@ export default function PlanSheet({ plan, request, version, status, onConfirm, o
       {compareTarget && (
         <CandidateCompareModal
           kind={compareTarget}
+          planId={plan.plan_id}
           flights={flightCands}
           hotels={hotelCands}
           route={flight?.route ?? null}
+          returnDepartureTime={flight?.return_departure_time ?? null}
+          returnArrivalTime={flight?.return_arrival_time ?? null}
           canChange={!confirmed && !readOnly && !!onSelectCandidate}
           pickingIndex={pickingIndex}
           onPick={handlePickCandidate}
