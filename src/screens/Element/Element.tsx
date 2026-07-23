@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Plane, Star, Plus, Check } from "lucide-react";
 import { FaWonSign } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import logo from "../../assets/img/logo.jpg";
+// 정식 로고(TripCanvas 워드마크 SVG) — 예전 logo.jpg + "Trip"/"Canvas" 텍스트 조합을 대체
+import logo from "../../assets/img/logo.svg";
 import { useNavigate } from "react-router-dom";
 
 const DESIGN_WIDTH = 1920;
@@ -72,11 +73,11 @@ export const Element = (): JSX.Element => {
         >
           <main className="relative h-270 w-[1920px] overflow-hidden bg-white">
             <header className="absolute left-0 top-0 h-14 w-[1920px] border-b border-black bg-white">
-              <div className="absolute left-17.25 top-1.75 w-12 font-['Pretendard',Helvetica]"><img src={logo} className="h-full w-full" /></div>
-
-              {/* 프로젝트 제목 버튼 (예: 홈으로 이동) */}
-              <button type="button" onClick={() => navigate("/")} className="absolute left-32.5 top-3.25 h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-rose-600 transition-opacity hover:opacity-70 font-['Pretendard',Helvetica]">Trip</button>
-              <button type="button" onClick={() => navigate("/")} className="absolute left-44.5 top-3.25 h-6 w-48 cursor-pointer bg-transparent text-left text-2xl font-bold text-black transition-opacity hover:opacity-70 font-['Pretendard',Helvetica]">Canvas</button>
+              {/* 로고 클릭 = 홈 이동. 워드마크에 서비스명이 들어 있어
+                  예전 이미지+텍스트 버튼 2개를 버튼 하나로 합쳤다 */}
+              <button type="button" onClick={() => navigate("/")} className="absolute left-17.25 top-2.5 cursor-pointer bg-transparent transition-opacity hover:opacity-70">
+                <img src={logo} alt="TripCanvas" className="h-9 w-auto" />
+              </button>
 
 
               <nav aria-label="주요 메뉴">
