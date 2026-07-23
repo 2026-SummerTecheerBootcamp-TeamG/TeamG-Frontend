@@ -1,15 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-
-/** 서비스 로고 마크 */
-function Mark() {
-  return (
-    <span className="relative h-[22px] w-[22px] shrink-0 overflow-hidden rounded-md bg-ink">
-      <span className="absolute left-[3px] top-[12px] h-[2px] w-4 origin-left -rotate-[32deg] bg-white" />
-      <span className="absolute right-[3px] top-[4px] h-[5px] w-[5px] rounded-full bg-cobalt ring-[3px] ring-cobalt/25" />
-    </span>
-  );
-}
+// 정식 로고(TripCanvas 워드마크 SVG). 예전에 CSS로 그리던 Mark 컴포넌트를 대체한다.
+import logo from "@/assets/img/logo.svg";
 
 export default function Header() {
   const { isLoggedIn, logout } = useAuth();
@@ -39,10 +31,11 @@ export default function Header() {
         {/* 로고 클릭 = 로그인 전: 온보딩(서비스 소개), 로그인 후: 플래닝룸 (버그 수정 — 로그인 상태에서도 항상 "/"로 가서 온보딩으로 튕기던 문제) */}
         <Link
           to={isLoggedIn ? "/planningroom" : "/"}
-          className="flex items-center gap-2.5 text-[19px] font-bold tracking-[-0.03em]"
+          className="flex items-center"
         >
-          <Mark />
-          트립캔버스
+          {/* 워드마크에 서비스명이 포함돼 있으므로 텍스트 없이 이미지 하나만 쓴다.
+              높이만 지정하고 w-auto로 비율(약 4.5:1)을 유지 */}
+          <img src={logo} alt="트립캔버스" className="h-7 w-auto" />
         </Link>
 
         <div className="flex items-center gap-1.5">
